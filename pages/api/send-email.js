@@ -1,4 +1,3 @@
-// backend/api/send-email.js
 import { Resend } from "resend";
 import initMiddleware from "../../lib/init-middleware";
 import Cors from 'cors';
@@ -9,13 +8,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Configura el middleware CORS
 const cors = initMiddleware(
   Cors({
-    methods: ["POST", "GET", "HEAD"],
+    methods: ["POST", "GET", "OPTIONS"],
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",
         "https://pmts-quote.vercel.app"
       ];
-  
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -23,9 +21,18 @@ const cors = initMiddleware(
       }
     }
   })
-)
-export default async (req, res) => {
+);
+
+export default async function handler(req, res) {
   await cors(req, res);
+
+  // ✅ Manejo manual de preflight (CORS)
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(200).end();
+  }
 
   if (req.method === "GET") {
     return res.status(200).send(`
@@ -61,16 +68,12 @@ export default async (req, res) => {
       selectedCourseIds.includes(String(course.id))
     );
 
-    const htmlCourses = selectedCourses
-      .map(
-        (course) => `
-          <div style="background-color: #e9f0ff; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-            <h3 style="margin: 0 0 10px; color: #003366;">${course?.name}</h3>
-            <span style="display: inline-block; background-color: #ffffff; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 13px;">IMO: ${course?.imo_no}</span>
-          </div>
-        `
-      )
-      .join("");
+    const htmlCourses = selectedCourses.map(course => `
+      <div style="background-color: #e9f0ff; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0 0 10px; color: #003366;">${course?.name}</h3>
+        <span style="display: inline-block; background-color: #ffffff; padding: 5px 10px; border-radius: 6px; font-weight: bold; font-size: 13px;">IMO: ${course?.imo_no}</span>
+      </div>
+    `).join("");
 
     const htmlContent = `
       <html>
@@ -110,4 +113,4 @@ export default async (req, res) => {
     console.error("Server Error:", err);
     return res.status(500).json({ message: "Error en el servidor" });
   }
-};
+}
