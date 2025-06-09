@@ -12,8 +12,8 @@ const cors = initMiddleware(
     methods: ["POST", "GET", "HEAD"],
     origin: (origin, callback) => {
       const allowedOrigins = [
-        "http://localhost:5173",
-        "https://pmts-quote.vercel.app/"
+        // "http://localhost:5173",
+        "https://pmts-quote.vercel.app"
       ];
   
       if (!origin || allowedOrigins.includes(origin)) {
