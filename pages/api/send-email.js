@@ -13,7 +13,7 @@ const cors = initMiddleware(
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",
-        "https://boda-ruben.vercel.app"
+        "https://pmts-quote.vercel.app/"
       ];
   
       if (!origin || allowedOrigins.includes(origin)) {
