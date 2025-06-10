@@ -207,22 +207,22 @@ export default async function handler(req, res) {
       html: htmlContent,
     })
 
-    const { error2 } = await resend.emails.send({
-      from: process.env.RESEND_EMAIL,
-      to: email,
-      subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
-      html: htmlContent,
-    })
+    // const { error2 } = await resend.emails.send({
+    //   from: process.env.RESEND_EMAIL,
+    //   to: email,
+    //   subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
+    //   html: htmlContent,
+    // })
     // Manejo de errores al enviar el correo
     if (error) {
       console.error(error)
       return res.status(500).json({ message: "Error al enviar el correo" })
     }
 
-    if (error2) {
-      console.error(error)
-      return res.status(500).json({ message: "Error al enviar el correo" })
-    }
+    // if (error2) {
+    //   console.error(error)
+    //   return res.status(500).json({ message: "Error al enviar el correo" })
+    // }
 
     // ===== DEVOLVER RESULTADOS CALCULADOS =====
     const response = {
