@@ -1,4 +1,11 @@
+
 // Email template generator function that creates the HTML for the professional quotation
+import path from 'path';
+import fs from 'fs';
+
+const logoPath = path.join(process.cwd(), 'public', 'images', 'logo.png');
+const logo = fs.readFileSync(logoPath).toString('base64');
+
 export function generateQuotationEmailHTML(data: {
   name: string
   lastName: string
@@ -67,7 +74,7 @@ export function generateQuotationEmailHTML(data: {
             <tr>
               <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
                 <!-- Logo -->
-                <img src="/placeholder.svg?height=80&width=120" alt="PMTS Logo" style="width: 120px; height: 80px; object-fit: contain; border-radius: 8px; background-color: rgba(255,255,255,0.1); padding: 10px;">
+                <img src="${logo ? `data:image/png;base64,${logo}` : '/placeholder.svg?...'}" alt="Company Logo" style="max-width: 120px; height: auto;" />
               </td>
               <td style="vertical-align: middle; text-align: left;">
                 <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: bold;">

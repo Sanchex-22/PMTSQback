@@ -209,7 +209,7 @@ export default async function handler(req, res) {
 
     const { error2 } = await resend.emails.send({
       from: process.env.RESEND_EMAIL,
-      to: {email},
+      to: email,
       subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
       html: htmlContent,
     })
