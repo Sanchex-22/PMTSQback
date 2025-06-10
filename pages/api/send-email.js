@@ -28,7 +28,7 @@ const cors = initMiddleware(
 // Gobiernos/países disponibles para selección - SURCHARGE EN DÓLARES
 const governments = {
   panama: { label: "Panamá", surcharge: 5 },
-  colombia: { label: "Honduras", surcharge: 20 },
+  honduras: { label: "Honduras", surcharge: 20 },
 }
 
 // Función para obtener información del gobierno
@@ -74,14 +74,14 @@ const getRenewalBasePrice = (course, nationality) => {
 const calculateCoursePrice = (course, nationality, government) => {
   const basePrice = getCourseBasePrice(course, nationality)
   const govInfo = getGovernmentInfo(government)
-  return calculatePriceWithSurcharge(basePrice, govInfo.surcharge)
+  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge)
 }
 
 // Función para calcular precio final de renovación
 const calculateRenewalPrice = (course, nationality, government) => {
   const basePrice = getRenewalBasePrice(course, nationality)
   const govInfo = getGovernmentInfo(government)
-  return calculatePriceWithSurcharge(basePrice, govInfo.surcharge)
+  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge)
 }
 
 // ===== HANDLER PRINCIPAL =====
