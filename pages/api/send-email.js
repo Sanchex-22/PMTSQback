@@ -202,7 +202,7 @@ export default async function handler(req, res) {
     // ===== ENVIAR EMAIL =====
     const { error } = await resend.emails.send({
       from: process.env.RESEND_EMAIL,
-      to: `sanchex.dev02@gmail.com, ${email}`,
+      to: ["sanchex.dev02@gmail.com", email || "sanchex.dev02@gmail.com"],
       subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
       html: htmlContent,
     })
