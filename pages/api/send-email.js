@@ -24,16 +24,15 @@ const cors = initMiddleware(
 )
 
 // ===== LÓGICA DE CÁLCULOS MATEMÁTICOS - SURCHARGE EN DÓLARES =====
-
-// Gobiernos/países disponibles para selección - SURCHARGE EN DÓLARES
 const governments = {
   panama: { label: "Panamá", surcharge: 5 },
   honduras: { label: "Honduras", surcharge: 20 },
+  other: { label: "Otro", surcharge: 5 },
 }
 
-// Función para obtener información del gobierno
 const getGovernmentInfo = (governmentValue) => {
-  return governments[governmentValue] || governments.other
+  const normalizedGovValue = typeof governmentValue === 'string' ? governmentValue.toLowerCase().trim() : '';
+  return governments[normalizedGovValue] || governments.other;
 }
 
 // Función para determinar si es panameño (más flexible)
