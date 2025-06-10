@@ -2,7 +2,9 @@ import { Resend } from "resend";
 import initMiddleware from "../../lib/init-middleware";
 import Cors from 'cors';
 import { courses } from "../../data/courses";
-
+const dotenv = require("dotenv");
+dotenv.config();
+console.log("API Key:", process.env.PORT)
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configura el middleware CORS
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
         <body>
           <h1>¡El servidor está funcionando!</h1>
           <p>Ruta: <strong>/api/send-email</strong></p>
-          <p>Puerto: <strong>${process.env.PORT || 3000}</strong></p>
+          <p>Puerto: <strong>${process.env.PORT || 3001}</strong></p>
         </body>
       </html>
     `);
@@ -55,9 +57,11 @@ export default async function handler(req, res) {
       nationality,
       email,
       phone,
-      courses: selectedCourseIds
+      courses: selectedCourseIds,
+      renewalCourses,
+      government
     } = req.body;
-
+    console.log("Received data:", req.body);
     if (!name || !email || !selectedCourseIds?.length) {
       return res
         .status(400)
