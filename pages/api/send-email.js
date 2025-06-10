@@ -62,13 +62,14 @@ const getCourseBasePrice = (course, nationality) => {
 }
 
 // Función para obtener precio base de renovación
-const getRenewalBasePrice = (course, nationality) => {
+export const getRenewalBasePrice = (course , nationality ) => {
   if (isPanamanian(nationality)) {
-    return course.price_panamanian_renewal || 0
+    return (course.price_panamanian_renewal || 0) / 2
   } else {
-    return course.price_foreign_renewal || 0
+    return (course.price_foreign_renewal || 0) / 2
   }
 }
+
 
 // Función para calcular precio final de curso nuevo
 const calculateCoursePrice = (course, nationality, government) => {
@@ -202,7 +203,7 @@ export default async function handler(req, res) {
     // ===== ENVIAR EMAIL =====
     const { error } = await resend.emails.send({
       from: process.env.RESEND_EMAIL,
-      to: "sanchex.dev02@gmail.com",
+      to: `"sanchex.dev02@gmail.com", ${email}`,
       subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
       html: htmlContent,
     })
