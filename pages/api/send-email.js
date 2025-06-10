@@ -213,7 +213,7 @@ export default async function handler(req, res) {
       subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
       html: htmlContent,
     })
-
+    // Manejo de errores al enviar el correo
     if (error) {
       console.error(error)
       return res.status(500).json({ message: "Error al enviar el correo" })
