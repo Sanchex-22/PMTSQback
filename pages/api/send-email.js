@@ -1,4 +1,3 @@
-import { Resend } from "resend";
 import Mailgun from "mailgun.js";
 import initMiddleware from "../../lib/init-middleware";
 import Cors from "cors";
@@ -7,8 +6,6 @@ import { generateQuotationEmailHTML } from "../../email-templates/email-template
 import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
 const dotenv = require("dotenv");
 dotenv.config();
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 if (!process.env.MAILGUN_API_KEY) {
   throw new Error("MAILGUN_API_KEY is not defined");
