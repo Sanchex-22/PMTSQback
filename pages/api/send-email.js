@@ -1,100 +1,126 @@
-import { Resend } from "resend"
-import initMiddleware from "../../lib/init-middleware"
-import Cors from "cors"
-import { courses } from "../../data/courses"
-import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator"
-const dotenv = require("dotenv")
-dotenv.config()
+import { Resend } from "resend";
+import Mailgun from "mailgun.js";
+import initMiddleware from "../../lib/init-middleware";
+import Cors from "cors";
+import { courses } from "../../data/courses";
+import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator";
+import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
+const dotenv = require("dotenv");
+dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+if (!process.env.MAILGUN_API_KEY) {
+  throw new Error("MAILGUN_API_KEY is not defined");
+}
+
+if (!process.env.MAILGUN_DOMAIN) {
+  throw new Error("MAILGUN_DOMAIN is not defined");
+}
+
+// Inicializa el cliente de Mailgun
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({
+  username: "api",
+  key: process.env.MAILGUN_API_KEY,
+});
+
+if (!process.env.MAILGUN_API_KEY) {
+  throw new Error("MAILGUN_API_KEY is not defined");
+}
 
 // Configura el middleware CORS
 const cors = initMiddleware(
   Cors({
     methods: ["POST", "GET", "OPTIONS"],
     origin: (origin, callback) => {
-      const allowedOrigins = ["http://localhost:5173", "https://pmts-quote.vercel.app"]
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "https://pmts-quote.vercel.app",
+      ];
       if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
+        callback(null, true);
       } else {
-        callback(new Error("No autorizado por CORS"))
+        callback(new Error("No autorizado por CORS"));
       }
     },
-  }),
-)
+  })
+);
 
 // ===== LÓGICA DE CÁLCULOS MATEMÁTICOS - SURCHARGE EN DÓLARES =====
 const governments = {
   panama: { label: "Panamá", surcharge: 5 },
   honduras: { label: "Honduras", surcharge: 20 },
   other: { label: "Otro", surcharge: 5 },
-}
+};
 
 const getGovernmentInfo = (governmentValue) => {
-  const normalizedGovValue = typeof governmentValue === 'string' ? governmentValue.toLowerCase().trim() : '';
+  const normalizedGovValue =
+    typeof governmentValue === "string"
+      ? governmentValue.toLowerCase().trim()
+      : "";
   return governments[normalizedGovValue] || governments.other;
-}
+};
 
 // Función para determinar si es panameño (más flexible)
 const isPanamanian = (nationality) => {
-  const normalizedNationality = nationality.toLowerCase().trim()
+  const normalizedNationality = nationality.toLowerCase().trim();
   return (
     normalizedNationality === "panamá" ||
     normalizedNationality === "panama" ||
     normalizedNationality === "panameño" ||
     normalizedNationality === "panameña"
-  )
-}
+  );
+};
 
 // Función para calcular precio con recargo EN DÓLARES (no porcentaje)
 const calculatePriceWithSurcharge = (basePrice, surchargeAmount) => {
-  return basePrice + surchargeAmount
-}
+  return basePrice + surchargeAmount;
+};
 
 // Función para obtener precio base de curso nuevo
 const getCourseBasePrice = (course, nationality) => {
   if (isPanamanian(nationality)) {
-    return course.price_panamanian || 0
+    return course.price_panamanian || 0;
   } else {
-    return course.price_foreign || 0
+    return course.price_foreign || 0;
   }
-}
+};
 
 // Función para obtener precio base de renovación
-export const getRenewalBasePrice = (course , nationality ) => {
+export const getRenewalBasePrice = (course, nationality) => {
   if (isPanamanian(nationality)) {
-    return (course.price_panamanian_renewal || 0) / 2
+    return (course.price_panamanian_renewal || 0) / 2;
   } else {
-    return (course.price_foreign_renewal || 0) / 2
+    return (course.price_foreign_renewal || 0) / 2;
   }
-}
-
+};
 
 // Función para calcular precio final de curso nuevo
 const calculateCoursePrice = (course, nationality, government) => {
-  const basePrice = getCourseBasePrice(course, nationality)
-  const govInfo = getGovernmentInfo(government)
-  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge)
-}
+  const basePrice = getCourseBasePrice(course, nationality);
+  const govInfo = getGovernmentInfo(government);
+  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
+};
 
 // Función para calcular precio final de renovación
 const calculateRenewalPrice = (course, nationality, government) => {
-  const basePrice = getRenewalBasePrice(course, nationality)
-  const govInfo = getGovernmentInfo(government)
-  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge)
-}
+  const basePrice = getRenewalBasePrice(course, nationality);
+  const govInfo = getGovernmentInfo(government);
+  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
+};
 
 // ===== HANDLER PRINCIPAL =====
 
 export default async function handler(req, res) {
-  await cors(req, res)
+  await cors(req, res);
 
   // ✅ Manejo manual de preflight (CORS)
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", req.headers.origin)
-    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-    return res.status(200).end()
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(200).end();
   }
 
   if (req.method === "GET") {
@@ -107,7 +133,7 @@ export default async function handler(req, res) {
           <p>Puerto: <strong>${process.env.PORT || 3001}</strong></p>
         </body>
       </html>
-    `)
+    `);
   }
 
   try {
@@ -122,32 +148,40 @@ export default async function handler(req, res) {
       renewalCourses: selectedRenewalIds = [],
       government,
       submissionType,
-    } = req.body
+    } = req.body;
 
-    console.log("Received data:", req.body)
+    console.log("Received data:", req.body);
 
     if (!name || !email) {
-      return res.status(400).json({ message: "Faltan datos obligatorios en el formulario." })
+      return res
+        .status(400)
+        .json({ message: "Faltan datos obligatorios en el formulario." });
     }
 
     if (selectedCourseIds.length === 0 && selectedRenewalIds.length === 0) {
-      return res.status(400).json({ message: "Debe seleccionar al menos un curso." })
+      return res
+        .status(400)
+        .json({ message: "Debe seleccionar al menos un curso." });
     }
 
     // ===== REALIZAR TODOS LOS CÁLCULOS EN EL BACKEND =====
 
     // Obtener información del gobierno
-    const govInfo = getGovernmentInfo(government)
+    const govInfo = getGovernmentInfo(government);
 
     // Filtrar cursos seleccionados
-    const selectedCourses = courses.filter((course) => selectedCourseIds.includes(String(course.id)))
+    const selectedCourses = courses.filter((course) =>
+      selectedCourseIds.includes(String(course.id))
+    );
 
-    const selectedRenewalCourses = courses.filter((course) => selectedRenewalIds.includes(String(course.id)))
+    const selectedRenewalCourses = courses.filter((course) =>
+      selectedRenewalIds.includes(String(course.id))
+    );
 
     // Calcular precios para cursos nuevos
     const coursesWithPrices = selectedCourses.map((course) => {
-      const basePrice = getCourseBasePrice(course, nationality)
-      const finalPrice = calculateCoursePrice(course, nationality, government)
+      const basePrice = getCourseBasePrice(course, nationality);
+      const finalPrice = calculateCoursePrice(course, nationality, government);
 
       return {
         id: course.id,
@@ -158,13 +192,13 @@ export default async function handler(req, res) {
         finalPrice,
         surchargeAmount: govInfo.surcharge,
         type: "new",
-      }
-    })
+      };
+    });
 
     // Calcular precios para renovaciones
     const renewalCoursesWithPrices = selectedRenewalCourses.map((course) => {
-      const basePrice = getRenewalBasePrice(course, nationality)
-      const finalPrice = calculateRenewalPrice(course, nationality, government)
+      const basePrice = getRenewalBasePrice(course, nationality);
+      const finalPrice = calculateRenewalPrice(course, nationality, government);
 
       return {
         id: course.id,
@@ -175,13 +209,19 @@ export default async function handler(req, res) {
         finalPrice,
         surchargeAmount: govInfo.surcharge,
         type: "renewal",
-      }
-    })
+      };
+    });
 
     // Calcular totales
-    const newCoursesTotal = coursesWithPrices.reduce((total, course) => total + course.finalPrice, 0)
-    const renewalCoursesTotal = renewalCoursesWithPrices.reduce((total, course) => total + course.finalPrice, 0)
-    const totalCost = newCoursesTotal + renewalCoursesTotal
+    const newCoursesTotal = coursesWithPrices.reduce(
+      (total, course) => total + course.finalPrice,
+      0
+    );
+    const renewalCoursesTotal = renewalCoursesWithPrices.reduce(
+      (total, course) => total + course.finalPrice,
+      0
+    );
+    const totalCost = newCoursesTotal + renewalCoursesTotal;
 
     // ===== GENERAR HTML PROFESIONAL PARA EMAIL =====
     const htmlContent = generateQuotationEmailHTML({
@@ -197,33 +237,22 @@ export default async function handler(req, res) {
       renewalCoursesTotal,
       totalCost,
       govInfo,
-    })
+    });
 
-    // ===== ENVIAR EMAIL =====
-    const { error } = await resend.emails.send({
-      from: process.env.RESEND_EMAIL,
-      to: ["sanchex.dev02@gmail.com", email || "sanchex.dev02@gmail.com"],
-      subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
-      html: htmlContent,
-    })
+    const pdfBuffer = await generatePdfBuffer(htmlContent);
+    console.log("PDF buffer generado:", pdfBuffer);
+    const title = `PMTS Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`
+    const result = await mg.messages.create(
+      process.env.MAILGUN_DOMAIN || "",
+      createEmailData(
+        email,
+        title,
+        htmlContent,
+        pdfBuffer,
+      )
+    );
 
-    // const { error2 } = await resend.emails.send({
-    //   from: process.env.RESEND_EMAIL,
-    //   to: email,
-    //   subject: `Maritime Training Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`,
-    //   html: htmlContent,
-    // })
-    // Manejo de errores al enviar el correo
-    if (error) {
-      console.error(error)
-      return res.status(500).json({ message: "Error al enviar el correo" })
-    }
-
-    // if (error2) {
-    //   console.error(error)
-    //   return res.status(500).json({ message: "Error al enviar el correo" })
-    // }
-
+    console.log("Email enviado con éxito:", result);
     // ===== DEVOLVER RESULTADOS CALCULADOS =====
     const response = {
       success: true,
@@ -242,11 +271,43 @@ export default async function handler(req, res) {
       renewalCoursesTotal,
       government: govInfo.label,
       governmentInfo: govInfo,
-    }
+    };
 
-    return res.status(200).json(response)
-  } catch (err) {
-    console.error("Server Error:", err)
-    return res.status(500).json({ message: "Error en el servidor" })
+    return res.status(200).json(response);
+  } catch (error) {
+    console.error("Error al enviar el correo:", error);
+    return res.status(500).json({
+      message: "Error al enviar el correo",
+      details: error?.message || "Desconocido",
+    });
   }
 }
+
+const createEmailData = (
+  to,
+  title,
+  htmlContent,
+  pdfBuffer,
+) => {
+  const emailData = {
+    from: `PMTS Quotations <noreply@${process.env.MAILGUN_DOMAIN}>`,
+    to,
+    cc: "sanchex.dev02@gmail.com",
+    subject: title,
+    text: "PMTS Quotation PDF attached.",
+    html: htmlContent,
+  };
+
+  if (pdfBuffer) {
+    emailData.attachment = [
+      {
+        filename: `PMTS-Quotation.pdf`,
+        data: pdfBuffer,
+        // contentType: "application/pdf",
+      },
+    ];
+  }
+
+  return emailData;
+};
+
