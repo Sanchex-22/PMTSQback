@@ -5,6 +5,10 @@ import fs from 'fs';
 
 const logoPath = path.join(process.cwd(), 'public', 'images', 'logo.png');
 const logo = fs.readFileSync(logoPath).toString('base64');
+const WhatsappNumber = process.env.WHATSAPP_NUMBER || '5073952801';
+const whatsappText = encodeURIComponent(
+  'Hello, I would like to inquire about the payment methods for my quotation.'
+);
 
 export function generateQuotationEmailHTML(data: {
   name: string
@@ -58,7 +62,7 @@ export function generateQuotationEmailHTML(data: {
   const grandTotal = totalCost + governmentFee
 
   return `
-    <!DOCTYPE html>
+ <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
@@ -66,16 +70,17 @@ export function generateQuotationEmailHTML(data: {
       <title>Maritime Training Quotation</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f7fa;">
-      <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; color: #333333; line-height: 1.6;">
+      <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; color: #333333; line-height: 1;">
         
         <!-- Header -->
         <div style="background-color: #1e40af; color: white; padding: 30px 40px;">
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
+              <td style="width: 120px; vertical-align: middle; padding-right: 10px;">
                 <!-- Logo -->
-                <img src="${logo ? `data:image/png;base64,${logo}` : '/placeholder.svg?...'}" alt="Company Logo" style="max-width: 120px; height: auto;" />
+                <img src="${logo ? `data:image/png;base64,${logo}` : '/placeholder.svg?...'}" alt="Company Logo" style="max-width: 100px; height: auto;" />
               </td>
+              
               <td style="vertical-align: middle; text-align: left;">
                 <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: bold;">
                   Panama Maritime Training Services, Inc.
@@ -88,6 +93,12 @@ export function generateQuotationEmailHTML(data: {
                   <p style="margin: 4px 0;">Phone: +(507) 395-2801 / +(507) 322-0013</p>
                 </div>
               </td>
+              
+              <td>               
+                <h2 style="margin: 0 0 0px 0; font-size: 12px; color: white; font-weight: bold;">
+                  QUOTATION #${quotationNumber}
+                </h2>
+              </td>
             </tr>
           </table>
         </div>
@@ -97,9 +108,6 @@ export function generateQuotationEmailHTML(data: {
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="width: 50%; padding-right: 20px; vertical-align: top;">
-                <h2 style="margin: 0 0 16px 0; font-size: 28px; color: #1e40af; font-weight: bold;">
-                  QUOTATION #${quotationNumber}
-                </h2>
                 <div style="font-size: 14px;">
                   <p style="margin: 4px 0;"><strong>Number:</strong> ${quotationNumber}</p>
                   <p style="margin: 4px 0;"><strong>Date:</strong> ${date}</p>
@@ -204,47 +212,22 @@ export function generateQuotationEmailHTML(data: {
                 <!-- Local Payment -->
                 <div style="background-color: #f0f9ff; padding: 16px; border-radius: 8px; border: 1px solid #bae6fd; height: 100%; box-sizing: border-box;">
                   <h4 style="margin: 0 0 12px 0; color: #0369a1;">LOCAL PAYMENT INFO.</h4>
-                  <div style="margin-bottom: 12px;">
-                    <strong>BANCO BANISTMO</strong><br>
-                    Panama Maritime Training Services, Inc.<br>
-                    Bank Account Number: 0101090844<br>
-                    Checking Account.
-                  </div>
-                  <div>
-                    <strong>BANCO GENERAL</strong><br>
-                    Panama Maritime Training Services, Inc.<br>
-                    Bank Account Number: 03-29-01-025184-0<br>
-                    Checking Account.
-                  </div>
+                    <a href="https://wa.me/${WhatsappNumber}?text=${whatsappText}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block p-3 relative"
+                    >Ask about the payment methods on WhatsApp.Click here</a>
                 </div>
               </td>
               <td style="width: 50%; padding-left: 10px; vertical-align: top;">
                 <!-- International Payment -->
                 <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0; height: 100%; box-sizing: border-box;">
                   <h4 style="margin: 0 0 12px 0; color: #166534;">PAYMENT INFO. ABROAD</h4>
-                  <div style="margin-bottom: 8px;">
-                    <strong>Beneficiary Account:</strong><br>
-                    PANAMA MARITIME TRAINING SERVICES, INC.<br>
-                    BANK ACCOUNT NUMBER: 03-29-01-025184-0<br>
-                    Address: 77th Street Bldg. 26 Panama City, Republic of Panama<br>
-                    PH: +(507)322-0013
-                  </div>
-                  <div style="margin-bottom: 8px;">
-                    <strong>Beneficiary Bank:</strong><br>
-                    BANCO GENERAL, S.A. - PANAMA<br>
-                    Swift Code: BAGEPAPA<br>
-                    Address: Aquilino de la Guardia Street and Ave. 5 B Sur<br>
-                    Panama City, Republic of Panama
-                  </div>
-                  <div>
-                    <strong>Intermediary Bank:</strong><br>
-                    CITIBANK NEW YORK, N.Y.<br>
-                    Account No.: 10951934<br>
-                    SWIFT Code: CITIUS33<br>
-                    ABA # 021000089<br>
-                    Address: 111 Wall Street New York, NY 10043<br>
-                    Phone: +1 917-746-1193
-                  </div>
+                    <a href="https://wa.me/${WhatsappNumber}?text=${whatsappText}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block p-3 relative"
+                    >Ask about the payment methods on WhatsApp.Click here</a>
                 </div>
               </td>
             </tr>
