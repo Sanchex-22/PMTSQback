@@ -61,7 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name: true,
           role: true,
           createdAt: true,
-          updatedAt: true,
         },
       });
 
