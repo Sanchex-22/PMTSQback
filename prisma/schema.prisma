@@ -1,0 +1,54 @@
+
+datasource db {
+  provider = "postgresql" // o "mysql", "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN  // Administrador con todos los permisos
+  SALES  // Vendedor que puede crear cotizaciones
+  CLIENT // Cliente que puede solicitar cotizaciones
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(CLIENT)
+  createdAt DateTime @default(now())
+  quotes Quote[]
+}
+
+model Course {
+  id          Int     @id @default(autoincrement())
+  name       String  @unique
+  abbr String?
+  price_panamanian       Float?
+  price_panamanian_renewal       Float?
+  price_foreign       Float?
+  price_foreign_renewal       Float?
+  imo_no String? 
+  quotes Quote[]
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+}
+
+model Quote {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now()) //
+  quotedPrice Float    //
+  status      QuoteStatus @default(PENDING)
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+  courseId Int
+  course   Course @relation(fields: [courseId], references: [id])
+}

@@ -1,11 +1,31 @@
 import Mailgun from "mailgun.js";
 import initMiddleware from "../../lib/init-middleware";
 import Cors from "cors";
-import { courses } from "../../data/courses";
+// import { courses } from "../../data/courses"; // <-- REMOVE THIS LINE
 import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator";
 import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
 const dotenv = require("dotenv");
 dotenv.config();
+
+// IMPORT PRISMA'S GENERATED TYPES AND FUNCTIONS
+import { Course, PrismaClient } from "@prisma/client"; // Import Course type and PrismaClient
+import { getAllCourses } from "../../db/courses";
+// You no longer need this custom interface because Prisma generates one for you
+// export interface Courses {
+//   id: string;
+//   name: string;
+//   abbr: string;
+//   imo_no?: string;
+//   price_panamanian?: number;
+//   price_foreign?: number;
+//   price_panamanian_renewal?: number;
+//   price_foreign_renewal?: number;
+// }
+
+// Initialize Prisma Client (if you haven't done so globally or in a separate utility)
+// It's recommended to reuse a single PrismaClient instance.
+// If you already have a global prisma client instance, you can use that instead.
+const prisma = new PrismaClient(); // Added for context, but getAllCourses handles its own client internally for now
 
 if (!process.env.MAILGUN_API_KEY) {
   throw new Error("MAILGUN_API_KEY is not defined");
@@ -51,7 +71,7 @@ const governments = {
   other: { label: "Otro", surcharge: 5 },
 };
 
-const getGovernmentInfo = (governmentValue) => {
+const getGovernmentInfo = (governmentValue: string) => { // Added type for governmentValue
   const normalizedGovValue =
     typeof governmentValue === "string"
       ? governmentValue.toLowerCase().trim()
@@ -60,7 +80,7 @@ const getGovernmentInfo = (governmentValue) => {
 };
 
 // Función para determinar si es panameño (más flexible)
-const isPanamanian = (nationality) => {
+const isPanamanian = (nationality: string) => { // Added type for nationality
   const normalizedNationality = nationality.toLowerCase().trim();
   return (
     normalizedNationality === "panamá" ||
@@ -71,12 +91,12 @@ const isPanamanian = (nationality) => {
 };
 
 // Función para calcular precio con recargo EN DÓLARES (no porcentaje)
-const calculatePriceWithSurcharge = (basePrice, surchargeAmount) => {
+const calculatePriceWithSurcharge = (basePrice: number, surchargeAmount: number) => { // Added types
   return basePrice + surchargeAmount;
 };
 
 // Función para obtener precio base de curso nuevo
-const getCourseBasePrice = (course, nationality) => {
+const getCourseBasePrice = (course: Course, nationality: string) => { // Using Prisma's Course type
   if (isPanamanian(nationality)) {
     return course.price_panamanian || 0;
   } else {
@@ -85,7 +105,7 @@ const getCourseBasePrice = (course, nationality) => {
 };
 
 // Función para obtener precio base de renovación
-export const getRenewalBasePrice = (course, nationality) => {
+export const getRenewalBasePrice = (course: Course, nationality: string) => { // Using Prisma's Course type
   if (isPanamanian(nationality)) {
     return (course.price_panamanian_renewal || 0) / 2;
   } else {
@@ -94,14 +114,14 @@ export const getRenewalBasePrice = (course, nationality) => {
 };
 
 // Función para calcular precio final de curso nuevo
-const calculateCoursePrice = (course, nationality, government) => {
+const calculateCoursePrice = (course: Course, nationality: string, government: string) => { // Using Prisma's Course type
   const basePrice = getCourseBasePrice(course, nationality);
   const govInfo = getGovernmentInfo(government);
   return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
 };
 
 // Función para calcular precio final de renovación
-const calculateRenewalPrice = (course, nationality, government) => {
+const calculateRenewalPrice = (course: Course, nationality: string, government: string) => { // Using Prisma's Course type
   const basePrice = getRenewalBasePrice(course, nationality);
   const govInfo = getGovernmentInfo(government);
   return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
@@ -109,12 +129,12 @@ const calculateRenewalPrice = (course, nationality, government) => {
 
 // ===== HANDLER PRINCIPAL =====
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) { // Use 'any' for req/res if not using specific Next.js types
   await cors(req, res);
 
   // ✅ Manejo manual de preflight (CORS)
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin as string);
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     return res.status(200).end();
@@ -141,8 +161,8 @@ export default async function handler(req, res) {
       nationality,
       email,
       phone,
-      courses: selectedCourseIds = [],
-      renewalCourses: selectedRenewalIds = [],
+      courses: selectedCourseIds = [], // These are strings from the frontend
+      renewalCourses: selectedRenewalIds = [], // These are strings from the frontend
       government,
       submissionType,
     } = req.body;
@@ -166,13 +186,21 @@ export default async function handler(req, res) {
     // Obtener información del gobierno
     const govInfo = getGovernmentInfo(government);
 
-    // Filtrar cursos seleccionados
-    const selectedCourses = courses.filter((course) =>
-      selectedCourseIds.includes(String(course.id))
+    // FETCH ALL COURSES FROM THE DATABASE FIRST
+    const allAvailableCourses: Course[] = await getAllCourses(); // <--- NEW: Get courses from DB
+
+    // Convert selectedCourseIds from strings to numbers for accurate filtering
+    const parsedSelectedCourseIds = selectedCourseIds.map((id: string) => parseInt(id, 10));
+    const parsedSelectedRenewalIds = selectedRenewalIds.map((id: string) => parseInt(id, 10));
+
+
+    // Filter selected courses from the courses fetched from the DB
+    const selectedCourses = allAvailableCourses.filter((course) =>
+      parsedSelectedCourseIds.includes(course.id) // Compare numbers now
     );
 
-    const selectedRenewalCourses = courses.filter((course) =>
-      selectedRenewalIds.includes(String(course.id))
+    const selectedRenewalCourses = allAvailableCourses.filter((course) =>
+      parsedSelectedRenewalIds.includes(course.id) // Compare numbers now
     );
 
     // Calcular precios para cursos nuevos
@@ -273,20 +301,30 @@ export default async function handler(req, res) {
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error al enviar el correo:", error);
+    // Ensure Prisma Client is disconnected if this is a standalone handler (not a long-running server)
+    // For Next.js API routes, Prisma generally recommends a single client instance outside the handler
+    // but explicit disconnection for errors can be good.
+    await prisma.$disconnect(); // Disconnect in case of error
     return res.status(500).json({
       message: "Error al enviar el correo",
-      details: error?.message || "Desconocido",
+      details: (error as Error)?.message || "Desconocido", // Cast error to Error for message property
     });
+  } finally {
+    // Also disconnect after successful operation if this is a short-lived script/function
+    // For Next.js API routes, it's often handled by a global instance or context.
+    // If PrismaClient is instantiated outside the handler, you wouldn't disconnect here.
+    // Given the simple setup, keeping it here for now.
+    await prisma.$disconnect(); // Disconnect after success too
   }
 }
 
 const createEmailData = (
-  to,
-  title,
-  htmlContent,
-  pdfBuffer,
+  to: string, // Added type
+  title: string, // Added type
+  htmlContent: string, // Added type
+  pdfBuffer: Buffer, // Added type
 ) => {
-  const emailData = {
+  const emailData: any = {
     from: `PMTS Quotations <noreply@${process.env.MAILGUN_DOMAIN}>`,
     to,
     cc: "sanchex.dev02@gmail.com",
@@ -300,11 +338,10 @@ const createEmailData = (
       {
         filename: `PMTS-Quotation.pdf`,
         data: pdfBuffer,
-        // contentType: "application/pdf",
+        // contentType: "application/pdf", // This might be needed depending on Mailgun version
       },
     ];
   }
 
   return emailData;
 };
-
