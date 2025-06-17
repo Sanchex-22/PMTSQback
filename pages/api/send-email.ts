@@ -1,31 +1,16 @@
 import Mailgun from "mailgun.js";
-import initMiddleware from "../../lib/init-middleware";
-import Cors from "cors";
-// import { courses } from "../../data/courses"; // <-- REMOVE THIS LINE
 import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator";
-import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
 const dotenv = require("dotenv");
 dotenv.config();
 
 // IMPORT PRISMA'S GENERATED TYPES AND FUNCTIONS
-import { Course, PrismaClient } from "@prisma/client"; // Import Course type and PrismaClient
+import { Course, PrismaClient } from "@prisma/client";
 import { getAllCourses } from "../../db/courses";
-// You no longer need this custom interface because Prisma generates one for you
-// export interface Courses {
-//   id: string;
-//   name: string;
-//   abbr: string;
-//   imo_no?: string;
-//   price_panamanian?: number;
-//   price_foreign?: number;
-//   price_panamanian_renewal?: number;
-//   price_foreign_renewal?: number;
-// }
+import cors from "../../lib/cors-middleware";
+import { courses_code } from "../../data/codes";
+import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
 
-// Initialize Prisma Client (if you haven't done so globally or in a separate utility)
-// It's recommended to reuse a single PrismaClient instance.
-// If you already have a global prisma client instance, you can use that instead.
-const prisma = new PrismaClient(); // Added for context, but getAllCourses handles its own client internally for now
+const prisma = new PrismaClient();
 
 if (!process.env.MAILGUN_API_KEY) {
   throw new Error("MAILGUN_API_KEY is not defined");
@@ -46,24 +31,6 @@ if (!process.env.MAILGUN_API_KEY) {
   throw new Error("MAILGUN_API_KEY is not defined");
 }
 
-// Configura el middleware CORS
-const cors = initMiddleware(
-  Cors({
-    methods: ["POST", "GET", "OPTIONS"],
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "https://pmts-quote.vercel.app",
-      ];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("No autorizado por CORS"));
-      }
-    },
-  })
-);
-
 // ===== LÓGICA DE CÁLCULOS MATEMÁTICOS - SURCHARGE EN DÓLARES =====
 const governments = {
   panama: { label: "Panamá", surcharge: 5 },
@@ -71,7 +38,7 @@ const governments = {
   other: { label: "Otro", surcharge: 5 },
 };
 
-const getGovernmentInfo = (governmentValue: string) => { // Added type for governmentValue
+const getGovernmentInfo = (governmentValue: string) => {
   const normalizedGovValue =
     typeof governmentValue === "string"
       ? governmentValue.toLowerCase().trim()
@@ -266,7 +233,7 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
 
     const pdfBuffer = await generatePdfBuffer(htmlContent);
     console.log("PDF buffer generado:", pdfBuffer);
-    const title = `PMTS Quotation - ${name} ${lastName} ($${totalCost.toFixed(2)})`
+    const title = `PMTS Quotation (${courses_code}) - ${name} ${lastName} ($${totalCost.toFixed(2)})`
     const result = await mg.messages.create(
       process.env.MAILGUN_DOMAIN || "",
       createEmailData(
@@ -301,20 +268,13 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
     return res.status(200).json(response);
   } catch (error) {
     console.error("Error al enviar el correo:", error);
-    // Ensure Prisma Client is disconnected if this is a standalone handler (not a long-running server)
-    // For Next.js API routes, Prisma generally recommends a single client instance outside the handler
-    // but explicit disconnection for errors can be good.
-    await prisma.$disconnect(); // Disconnect in case of error
+    await prisma.$disconnect();
     return res.status(500).json({
       message: "Error al enviar el correo",
-      details: (error as Error)?.message || "Desconocido", // Cast error to Error for message property
+      details: (error as Error)?.message || "Desconocido",
     });
   } finally {
-    // Also disconnect after successful operation if this is a short-lived script/function
-    // For Next.js API routes, it's often handled by a global instance or context.
-    // If PrismaClient is instantiated outside the handler, you wouldn't disconnect here.
-    // Given the simple setup, keeping it here for now.
-    await prisma.$disconnect(); // Disconnect after success too
+    await prisma.$disconnect();
   }
 }
 
