@@ -43,18 +43,11 @@ export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
   // Función para determinar el valor booleano de headless
   const determineHeadlessBooleanOption = (): boolean => {
     if (isProduction) {
-      // En producción, nos basamos en la configuración de chrome-aws-lambda.
-      // Si chromium.headless es explícitamente false, no usamos headless.
       if (chromium.headless === false) {
         return false;
       }
-      // Para cualquier otro valor (true, 'new', 'shell', undefined, u otra cadena),
-      // interpretamos que se desea modo headless, lo que se traduce a `true`
-      // para una opción booleana.
       return true;
     } else {
-      // Para desarrollo local, la intención original era usar 'new',
-      // lo que significa modo headless. Para una opción booleana, esto es `true`.
       return true;
     }
   };
@@ -65,25 +58,25 @@ export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
   const browser = await puppeteer.launch({
     args: launchArgs,
     defaultViewport: chromium.defaultViewport,
-    executablePath: executablePath, // TypeScript infiere que es string aquí debido al throw anterior
-    headless: headlessOption, // Ahora es un booleano, corrigiendo el error de tipo
+    executablePath: executablePath,
+    headless: headlessOption,
     ignoreHTTPSErrors: true,
-    protocolTimeout: 90000, // Aumentado para operaciones largas
+    // Eliminamos protocolTimeout ya que no es reconocido por el tipo LaunchOptions
+    // Si necesitas un timeout general para el lanzamiento, Puppeteer tiene una opción 'timeout'
+    // que por defecto es 30000ms. Si ese es un problema, puedes añadirlo:
+    // timeout: 60000, // Timeout general para el lanzamiento en ms
   });
 
   console.log("Navegador lanzado, creando nueva página...");
   const page = await browser.newPage();
   console.log("Página creada.");
 
-  // Aumentar el timeout de navegación por defecto si es necesario
-  // page.setDefaultNavigationTimeout(60000);
-
   await page.setBypassCSP(true);
   console.log("CSP bypass configurado.");
 
   console.log("Estableciendo contenido HTML...");
   await page.setContent(htmlContent, {
-    waitUntil: "networkidle0", // Espera a que la red esté inactiva
+    waitUntil: "networkidle0",
     timeout: 90000, // Timeout para el establecimiento del contenido
   });
   console.log("Contenido HTML establecido.");
