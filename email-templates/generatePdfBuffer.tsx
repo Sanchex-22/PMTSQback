@@ -1,77 +1,69 @@
-import chromium from "chrome-aws-lambda";
+import chromium from "@sparticuz/chromium"; // Usado solo si IS_SERVERLESS_ENV es true
 import puppeteer, { PaperFormat } from "puppeteer-core";
 
 export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
-  // Cambiamos la forma de detectar si estamos en un entorno serverless (Vercel)
-  // process.env.VERCEL se establece a "1" por Vercel en todos los despliegues.
-  // process.env.NODE_ENV también es útil. En Vercel, suele ser "production".
-  // Para desarrollo local, NODE_ENV suele ser "development".
-  const IS_SERVERLESS_ENV = !!process.env.VERCEL || process.env.NODE_ENV === "production";
+  // Lógica de detección de entorno mejorada
+  const IS_ON_VERCEL =  process.env.VERCEL === "1";
+  const IS_PRODUCTION_BUILD = process.env.NODE_ENV === "production";
+  const IS_SERVERLESS_ENV = IS_ON_VERCEL; // Usar esto para la lógica de Puppeteer
 
-  console.log(`IS_SERVERLESS_ENV: ${IS_SERVERLESS_ENV}`);
+  console.log(`--- Environment Detection ---`);
   console.log(`process.env.VERCEL: ${process.env.VERCEL}`);
   console.log(`process.env.NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`process.env.AWS_EXECUTION_ENV (for reference): ${process.env.AWS_EXECUTION_ENV}`);
-
+  console.log(`IS_ON_VERCEL (!!process.env.VERCEL): ${IS_ON_VERCEL}`);
+  console.log(`IS_PRODUCTION_BUILD (NODE_ENV === "production"): ${IS_PRODUCTION_BUILD}`);
+  console.log(`IS_SERVERLESS_ENV (para Puppeteer): ${IS_SERVERLESS_ENV}`);
+  console.log(`-----------------------------`);
 
   let executablePath: string | undefined;
   let launchArgs: string[];
+  let effectiveHeadlessOption: boolean | 'shell' = true; // Default para local y modo moderno
 
-  if (IS_SERVERLESS_ENV) { // Usamos la nueva variable
-    console.log("Modo Serverless: Usando chromium.executablePath y chromium.args.");
-    executablePath = await chromium.executablePath;
-    // Asegurarse de que los args son los de chrome-aws-lambda
-    launchArgs = chromium.args.concat([
-        '--font-render-hinting=none', // Puede mejorar la renderización de fuentes
-        // '--disable-dev-shm-usage', // chromium.args ya suele incluir esto si es necesario
-    ]);
-    // Eliminar duplicados si chromium.args ya los tiene
-    launchArgs = Array.from(new Set(launchArgs));
+  if (IS_SERVERLESS_ENV) {
+    console.log("Modo Serverless (Vercel): Usando @sparticuz/chromium.");
+    // @sparticuz/chromium ya incluye args y configura headless por defecto
+    // para ser compatible con entornos serverless.
+    executablePath = await chromium.executablePath(); // Puede ser una URL remota o local si ya está cacheado
+    launchArgs = chromium.args;
+    // Map "shell" to "shell", otherwise use true/false
+    effectiveHeadlessOption = chromium.headless === "shell" ? "shell" : !!chromium.headless; // Solo "shell", true o false
 
-    // Es crucial que chrome-aws-lambda esté en 'dependencies' en tu package.json
-    // y puppeteer-core también. 'puppeteer' (completo) debe estar en 'devDependencies'.
     if (!executablePath) {
-        console.error("¡ERROR CRÍTICO! chromium.executablePath es nulo o indefinido en entorno serverless.");
-        throw new Error("Chromium executablePath de chrome-aws-lambda no se pudo obtener. Verifica la instalación de chrome-aws-lambda.");
+      console.error("¡ERROR CRÍTICO EN VERCEL! @sparticuz/chromium.executablePath() devolvió nulo.");
+      throw new Error("@sparticuz/chromium executablePath no se pudo obtener en Vercel.");
     }
-
   } else {
-    console.log("Modo Local: Usando puppeteer (completo) executablePath().");
+    console.log("Modo Local: Usando puppeteer (completo) y su Chromium instalado.");
     try {
-      const puppeteerFull = require("puppeteer");
+      const puppeteerFull = require("puppeteer"); // Importa la versión completa de puppeteer
       executablePath = puppeteerFull.executablePath();
-      console.log(`Local executablePath encontrado: ${executablePath}`);
       launchArgs = [
-        '--no-sandbox',
+        '--no-sandbox', // Común para desarrollo local, especialmente en Linux o CI
         '--disable-setuid-sandbox',
+        // Puedes añadir más argumentos si los necesitas para local
       ];
+      // effectiveHeadlessOption ya es 'new' por defecto, lo cual es bueno para local
     } catch (e) {
       console.error("Error al obtener executablePath de puppeteer (completo) localmente:", e);
-      throw new Error("Puppeteer (completo) no está instalado. Asegúrate de tener 'puppeteer' en devDependencies y haber ejecutado 'npm install'.");
+      throw new Error("Puppeteer (completo) no está instalado o no pudo encontrar Chromium. Asegúrate de tener 'puppeteer' en devDependencies y haber ejecutado 'npm install'.");
     }
   }
 
   if (!executablePath) {
-    // Esta condición ahora es más un seguro, el error específico debería haber saltado antes.
     throw new Error("Chromium executablePath no se pudo determinar (después de la lógica de entorno).");
   }
 
-  console.log(`Intentando lanzar el navegador con executablePath: ${executablePath}`);
-  console.log(`Argumentos de lanzamiento: ${JSON.stringify(launchArgs)}`);
-
-  const headlessOption: boolean = IS_SERVERLESS_ENV
-    ? (chromium.headless === false ? false : true) // En serverless, respetar config de chrome-aws-lambda o default a true
-    : true; // En local, default a true (nuevo modo headless)
-
-  console.log(`Opción headless determinada (booleana): ${headlessOption}`);
+  console.log(`Intentando lanzar el navegador con:`);
+  console.log(`  executablePath: ${executablePath}`);
+  console.log(`  args: ${JSON.stringify(launchArgs)}`);
+  console.log(`  headless: ${effectiveHeadlessOption}`);
 
   const browser = await puppeteer.launch({
     args: launchArgs,
-    defaultViewport: chromium.defaultViewport, // Sigue siendo útil usar el defaultViewport de chromium
     executablePath: executablePath,
-    headless: headlessOption,
+    headless: effectiveHeadlessOption,
+    // defaultViewport: IS_SERVERLESS_ENV ? chromium.defaultViewport : { width: 1920, height: 1080 }, // Opcional, @sparticuz podría no tener defaultViewport
     ignoreHTTPSErrors: true,
-    // timeout: 60000, // Opcional: Timeout general para el lanzamiento
   });
 
   console.log("Navegador lanzado, creando nueva página...");
