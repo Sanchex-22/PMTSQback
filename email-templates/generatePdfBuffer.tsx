@@ -2,10 +2,8 @@ import chromium from "chrome-aws-lambda";
 import puppeteer from "puppeteer-core";
 
 export async function generatePdfBuffer(htmlContent) {
-  // Detectamos si estamos en entorno serverless (AWS Lambda o Vercel)
   const isServerless = !!process.env.AWS_EXECUTION_ENV || process.env.VERCEL === "1";
 
-  // Elegimos la ruta del ejecutable
   const executablePath = isServerless
     ? await chromium.executablePath
     : require("puppeteer").executablePath();
