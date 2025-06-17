@@ -38,14 +38,16 @@ export async function generatePdfBuffer(htmlContent) {
   console.log(`Intentando lanzar el navegador con executablePath: ${executablePath}`);
   console.log(`Argumentos de lanzamiento: ${JSON.stringify(launchArgs)}`); // Log para ver los args
 
-  const browser = await puppeteer.launch({
-    args: launchArgs, // Usar los args definidos según el entorno
-    defaultViewport: chromium.defaultViewport, // Esto suele ser seguro
-    executablePath: executablePath,
-    headless: isProduction ? chromium.headless : 'new', // 'new' es bueno para local, o true
-    ignoreHTTPSErrors: true,
-    protocolTimeout: 60000, // Aumentar el timeout
-  });
+const browser = await puppeteer.launch({
+  args: launchArgs,
+  defaultViewport: chromium.defaultViewport,
+  executablePath: executablePath as string,
+  headless: isProduction
+    ? (typeof chromium.headless === 'string' ? 'new' : chromium.headless)
+    : 'new',
+  ignoreHTTPSErrors: true,
+  protocolTimeout: 60000,
+});
 
   console.log("Navegador lanzado, creando nueva página...");
   const page = await browser.newPage();
