@@ -7,7 +7,7 @@
         "start": "next start",
         "prisma:migrate": "prisma migrate dev --name init",
         "prisma:generate": "prisma generate",
-        "seed": "node --loader ts-node/esm prisma/seed.ts"    
+        "seed": "node --loader ts-node/esm prisma/seed.ts"
     },
     "dependencies": {
         "@prisma/client": "^6.9.0",
@@ -19,6 +19,7 @@
         "formidable": "^3.5.4",
         "mailgun.js": "^12.0.2",
         "next": "^15.3.3",
+        "pdf-lib": "^1.17.1",
         "puppeteer": "^24.10.1",
         "puppeteer-core": "^22.15.0",
         "react": "^18.0.0",

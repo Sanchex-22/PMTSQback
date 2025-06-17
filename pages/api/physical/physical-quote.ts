@@ -28,6 +28,7 @@ const mg = mailgun.client({
 const ADMIN_EMAIL_RECIPIENT = "sanchex.dev02@gmail.com";
 
 const EXPECTED_FILE_FIELDS = [
+  "documento_identidad",
   "blood_count",
   "chemistry",
   "rh_type",
