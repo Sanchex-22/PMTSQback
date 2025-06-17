@@ -1,7 +1,8 @@
-name = "mi-worker-cloudflare" # Elige un nombre único
-main = "dist/worker.js" # O la ruta a tu script de worker compilado, ej: src/index.ts si usas TypeScript y wrangler lo compila
-compatibility_date = "2024-06-17" # Usa la fecha actual o una recomendada
+# Ejemplo de contenido en wrangler.toml
+name = "mi-worker-cloudflare"
+main = "dist/worker.js" # O la ruta a tu script de worker ya compilado
+compatibility_date = "2024-06-17" # Actualiza esta fecha
 
 [build]
-command = "npm run build:worker" # Si necesitas un paso de compilación para tu worker
-# O si tu worker es un archivo simple, puedes omitir el [build] command y apuntar 'main' directamente a él.
+command = "npm run build:worker" # <--- Esta es la línea que causa el problema
+# watch_dir = "src" # Opcional, directorio con el código fuente del worker
