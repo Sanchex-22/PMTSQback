@@ -1,5 +1,5 @@
 import chromium from "chrome-aws-lambda";
-import puppeteer from "puppeteer-core"; // puppeteer-core es correcto para AWS Lambda/Vercel
+import puppeteer, { PaperFormat } from "puppeteer-core"; // Importa PaperFormat
 
 // Añadimos tipos para los parámetros y el valor de retorno para mayor claridad
 export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
@@ -61,10 +61,7 @@ export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
     executablePath: executablePath,
     headless: headlessOption,
     ignoreHTTPSErrors: true,
-    // Eliminamos protocolTimeout ya que no es reconocido por el tipo LaunchOptions
-    // Si necesitas un timeout general para el lanzamiento, Puppeteer tiene una opción 'timeout'
-    // que por defecto es 30000ms. Si ese es un problema, puedes añadirlo:
-    // timeout: 60000, // Timeout general para el lanzamiento en ms
+    // timeout: 60000, // Opcional: Timeout general para el lanzamiento
   });
 
   console.log("Navegador lanzado, creando nueva página...");
@@ -83,7 +80,7 @@ export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
 
   console.log("Generando PDF...");
   const pdfBuffer = await page.pdf({
-    format: "A4",
+    format: "a4" as PaperFormat, // Cambiado "A4" a "a4" y añadido un type assertion
     printBackground: true,
     margin: {
         top: '20px',
