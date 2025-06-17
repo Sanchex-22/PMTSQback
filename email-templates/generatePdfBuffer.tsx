@@ -1,16 +1,6 @@
 import chromium from "@sparticuz/chromium";
 import puppeteer, { PaperFormat, PuppeteerLaunchOptions } from "puppeteer-core";
 
-// Para forzar a @sparticuz/chromium a descargar el bundle completo que incluye
-// muchas de las dependencias .so. Esto es crucial para entornos como Vercel.
-// Estas variables de entorno deben estar configuradas en tu proyecto Vercel.
-// - SPARTICUZ_CHROMIUM_SHOULD_SKIP_DOWNLOAD -> false (o no definida)
-// - SPARTICUZ_CHROMIUM_MINIO_SKIP_DOWNLOAD -> true (si no usas MinIO)
-// La mayoría de las veces, @sparticuz/chromium maneja esto bien por defecto si
-// no encuentra un Chromium existente. Asegúrate de que no haya variables que le digan
-// que *no* descargue (como SPARTICUZ_CHROMIUM_SHOULD_SKIP_DOWNLOAD=true).
-// Vercel típicamente tiene un entorno donde la descarga es necesaria la primera vez.
-
 export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
   // --- Detección de Entorno ---
   const IS_ON_VERCEL = process.env.VERCEL === "1";
