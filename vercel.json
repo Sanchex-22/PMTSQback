@@ -1,10 +1,9 @@
 {
   "version": 2,
-  "functions": {
-    "api/send-email.ts": {
-      "runtime": "node 18",
-      "memory": 512,
-      "maxDuration": 10
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  }
+  ]
 }
