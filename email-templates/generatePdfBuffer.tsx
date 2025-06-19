@@ -1,4 +1,4 @@
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import puppeteer, { PaperFormat, PuppeteerLaunchOptions } from "puppeteer-core";
 
 export async function generatePdfBuffer(htmlContent: string): Promise<Buffer> {
