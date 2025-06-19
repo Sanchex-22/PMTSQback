@@ -215,19 +215,6 @@ export function generateQuotationEmailHTML(data: {
               <td colspan="4" style="border: 1px solid #1e40af; padding: 12px; text-align: right; font-weight: bold; font-size: 16px;">Grand Total</td>
               <td style="border: 1px solid #1e40af; padding: 12px; text-align: right; font-weight: bold; font-size: 16px;">$${totalCost.toFixed(2)}</td>
             </tr>
-
-            ${
-              govInfo.surcharge > 0
-                ? `
-            <!-- Surcharge Note Row -->
-            <tr>
-              <td colspan="5" style="border: 1px solid #d1d5db; padding: 8px; text-align: center; font-size: 11px; color: #6b7280; background-color: #f9fafb;">
-                *Includes $${govInfo.surcharge} surcharge per course for ${govInfo.label}
-              </td>
-            </tr>
-            `
-                : ""
-            }
           </table>
         </div>
 
@@ -268,7 +255,7 @@ export function generateQuotationEmailHTML(data: {
         <!-- Footer -->
         <div style="background-color: #f9fafb; padding: 20px 40px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0;">
-            This quotation is valid for 45 days. Please contact us for any questions or clarifications.
+            This quotation is valid for 15 days. Please contact us for any questions or clarifications.
           </p>
             <p style="margin: 4px 0;">Phone: +(507) 395-2801 / +(507) 322-0013</p>
             <p style="4px 0;">Email: info@panamamaritimetraining.com</p>

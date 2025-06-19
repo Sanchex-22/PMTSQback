@@ -207,9 +207,6 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 2. Determinar el courseId para el registro principal de Quote
-    // Se usará el ID del primer curso seleccionado para satisfacer el requisito del modelo Quote.
-    // Esto es un workaround para modelos que esperan un solo curso por cotización.
     let mainQuoteCourseId: number;
     if (selectedCourses.length > 0) {
       mainQuoteCourseId = selectedCourses[0].id;
@@ -272,6 +269,7 @@ export default async function handler(req: any, res: any) {
         title,
         htmlContent,
         pdfBuffer,
+        quotationNumber
       )
     );
 
@@ -327,6 +325,7 @@ const createEmailData = (
   title: string,
   htmlContent: string,
   pdfBuffer: Buffer,
+  quotationNumber: string
 ) => {
   const emailData: any = {
     from: `PMTS Quotations <noreply@${process.env.MAILGUN_DOMAIN}>`,
@@ -340,7 +339,7 @@ const createEmailData = (
   if (pdfBuffer) {
     emailData.attachment = [
       {
-        filename: `PMTS-Quotation.pdf`,
+        filename: `PMTS-Quotation-${quotationNumber || 0}.pdf`,
         data: pdfBuffer,
       },
     ];

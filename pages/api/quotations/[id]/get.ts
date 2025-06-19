@@ -1,6 +1,6 @@
 // pages/api/quotations/[id]/get.ts
 import { PrismaClient } from "@prisma/client";
-import cors from "../../../../lib/cors-middleware"; // ¡NOTA: La ruta a cors-middleware ha cambiado!
+import cors from "../../../../lib/cors-middleware"; // ¡Asegúrate de que la ruta a cors-middleware sea correcta!
 
 const prisma = new PrismaClient();
 
@@ -25,51 +25,17 @@ export default async function handler(req: any, res: any) {
     const quoteId = parseInt(id as string);
 
     // --- AUTENTICACIÓN Y AUTORIZACIÓN: ¡CRÍTICO! ---
-    // Aquí deberías integrar tu lógica de autenticación para verificar:
-    // 1. Si el usuario está logueado.
-    // 2. Si el usuario tiene rol 'ADMIN' o 'SALES', puede ver cualquier cotización.
-    // 3. Si el usuario tiene rol 'CLIENT', solo puede ver las cotizaciones donde userId coincida con su propio ID.
-    // Ejemplo (pseudocódigo, necesitas tus JWT/Session parsers aquí):
-    /*
-    const user = req.user; // Asume que el middleware de auth ya populó req.user
-    if (!user) {
-      return res.status(401).json({ message: "Authentication required." });
-    }
-    // Si necesitas el objeto completo de la cotización para la autorización:
-    // const quoteToCheckAuth = await prisma.quote.findUnique({ where: { id: quoteId } });
-    // if (!quoteToCheckAuth) { /* manejar 404 */ /* }
-    // if (user.role === 'CLIENT' && user.id !== quoteToCheckAuth.userId) {
-    //   return res.status(403).json({ message: "Forbidden: You can only view your own quotations." });
-    // }
-    */
+    // (Mantén aquí tu lógica de autenticación y autorización)
     // --- FIN AUTENTICACIÓN Y AUTORIZACIÓN ---
 
-    const quote = await prisma.quote.findUnique({
+    // 1. Obtener la cotización actual de la DB
+    let quote = await prisma.quote.findUnique({ // Usamos 'let' porque 'quote' podría ser reasignado
       where: {
         id: quoteId,
       },
-      // Incluye los detalles del usuario y del curso para una vista completa
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        course: {
-          select: {
-            id: true,
-            name: true,
-            abbr: true,
-            imo_no: true,
-            price_panamanian: true,
-            price_panamanian_renewal: true,
-            price_foreign: true,
-            price_foreign_renewal: true,
-          },
-        },
+        user: { select: { id: true, name: true, email: true, role: true } },
+        course: { select: { id: true, name: true, abbr: true, imo_no: true } }, // Puedes seleccionar los campos que necesites
       },
     });
 
@@ -77,23 +43,35 @@ export default async function handler(req: any, res: any) {
       return res.status(404).json({ message: "Quotation not found." });
     }
 
-    // Calcular si la cotización ha expirado
-    const hasExpired = new Date() > quote.expiresAt;
-    // Si la cotización está PENDIENTE pero ha expirado, cambia su estado a EXPIRED en la respuesta
-    const currentStatus = hasExpired && quote.status === 'PENDING' ? 'EXPIRED' : quote.status;
+    // 2. Verificar si la cotización ha expirado y si su estado es PENDING
+    const now = new Date();
+    if (quote.status === 'PENDING' && now > quote.expiresAt) {
+      console.log(`[INFO] Quotation ${quoteId} has expired. Updating status to EXPIRED.`);
+      // 3. Si ha expirado y está pendiente, actualizar su estado en la DB
+      quote = await prisma.quote.update({ // Reasigna la cotización con el estado actualizado
+        where: { id: quoteId },
+        data: { status: 'EXPIRED' },
+        include: {
+          user: { select: { id: true, name: true, email: true, role: true } },
+          course: { select: { id: true, name: true, abbr: true, imo_no: true } },
+        },
+      });
+    }
 
-    // Puedes devolver más detalles aquí si se almacenaron en el proceso de creación (ej. nationality, government info)
+    // 4. Devolver la cotización (ahora con el estado potencialmente actualizado)
+    const hasExpired = new Date() > quote.expiresAt; // Esto seguirá siendo true si se acaba de expirar
+    // Ya no necesitamos 'currentStatus' porque 'quote.status' ya está actualizado
     return res.status(200).json({
       ...quote,
-      status: currentStatus, // Asegura que el estado se refleje como EXPIRED si el tiempo pasó
+      status: quote.status, // Será 'EXPIRED' si se actualizó
       hasExpired: hasExpired,
-      expiresAt: quote.expiresAt.toISOString(), // Formato ISO para fácil manejo en frontend
+      expiresAt: quote.expiresAt.toISOString(),
       createdAt: quote.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error("Error fetching quotation:", error);
+    console.error("Error fetching or updating quotation status:", error);
     return res.status(500).json({
-      message: "Error fetching quotation",
+      message: "Error fetching or updating quotation status",
       details: (error as Error)?.message || "Unknown error",
     });
   } finally {
