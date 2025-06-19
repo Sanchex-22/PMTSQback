@@ -1,4 +1,4 @@
-
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql" // o "mysql", "sqlite"
   url      = env("DATABASE_URL")
@@ -21,34 +21,36 @@ model User {
   name      String?
   role      Role     @default(CLIENT)
   createdAt DateTime @default(now())
-  quotes Quote[]
+  quotes    Quote[]
 }
 
 model Course {
-  id          Int     @id @default(autoincrement())
-  name       String  @unique
-  abbr String?
+  id                     Int      @id @default(autoincrement())
+  name                   String   @unique
+  abbr                   String?
   price_panamanian       Float?
-  price_panamanian_renewal       Float?
-  price_foreign       Float?
-  price_foreign_renewal       Float?
-  imo_no String? 
-  quotes Quote[]
+  price_panamanian_renewal Float?
+  price_foreign          Float?
+  price_foreign_renewal  Float?
+  imo_no                 String?
+  quotes                 Quote[]
 }
 
 enum QuoteStatus {
   PENDING
   APPROVED
   EXPIRED
+  REJECTED
 }
 
 model Quote {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now()) //
-  quotedPrice Float    //
+  id          Int         @id @default(autoincrement())
+  createdAt   DateTime    @default(now())
+  quotedPrice Float
   status      QuoteStatus @default(PENDING)
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-  courseId Int
-  course   Course @relation(fields: [courseId], references: [id])
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id])
+  courseId    Int
+  course      Course      @relation(fields: [courseId], references: [id])
+  expiresAt   DateTime    // ¡NUEVO CAMPO! Para la validez de 45 días
 }

@@ -1,10 +1,10 @@
+// pages/api/send-email.ts
 import Mailgun from "mailgun.js";
 import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator";
 const dotenv = require("dotenv");
 dotenv.config();
 
-// IMPORT PRISMA'S GENERATED TYPES AND FUNCTIONS
-import { Course, PrismaClient } from "@prisma/client";
+import { Course, PrismaClient, User } from "@prisma/client"; // Import User type
 import { getAllCourses } from "../../db/courses";
 import cors from "../../lib/cors-middleware";
 import { courses_code } from "../../data/codes";
@@ -20,7 +20,6 @@ if (!process.env.MAILGUN_DOMAIN) {
   throw new Error("MAILGUN_DOMAIN is not defined");
 }
 
-// Inicializa el cliente de Mailgun
 const mailgun = new Mailgun(FormData);
 const mg = mailgun.client({
   username: "api",
@@ -46,8 +45,7 @@ const getGovernmentInfo = (governmentValue: string) => {
   return governments[normalizedGovValue] || governments.other;
 };
 
-// Función para determinar si es panameño (más flexible)
-const isPanamanian = (nationality: string) => { // Added type for nationality
+const isPanamanian = (nationality: string) => {
   const normalizedNationality = nationality.toLowerCase().trim();
   return (
     normalizedNationality === "panamá" ||
@@ -57,13 +55,7 @@ const isPanamanian = (nationality: string) => { // Added type for nationality
   );
 };
 
-// Función para calcular precio con recargo EN DÓLARES (no porcentaje)
-const calculatePriceWithSurcharge = (basePrice: number, surchargeAmount: number) => { // Added types
-  return basePrice + surchargeAmount;
-};
-
-// Función para obtener precio base de curso nuevo
-const getCourseBasePrice = (course: Course, nationality: string) => { // Using Prisma's Course type
+const getCoursePriceExcludingSurcharge = (course: Course, nationality: string) => {
   if (isPanamanian(nationality)) {
     return course.price_panamanian || 0;
   } else {
@@ -71,8 +63,7 @@ const getCourseBasePrice = (course: Course, nationality: string) => { // Using P
   }
 };
 
-// Función para obtener precio base de renovación
-export const getRenewalBasePrice = (course: Course, nationality: string) => { // Using Prisma's Course type
+export const getRenewalPriceExcludingSurcharge = (course: Course, nationality: string) => {
   if (isPanamanian(nationality)) {
     return (course.price_panamanian_renewal || 0) / 2;
   } else {
@@ -80,26 +71,12 @@ export const getRenewalBasePrice = (course: Course, nationality: string) => { //
   }
 };
 
-// Función para calcular precio final de curso nuevo
-const calculateCoursePrice = (course: Course, nationality: string, government: string) => { // Using Prisma's Course type
-  const basePrice = getCourseBasePrice(course, nationality);
-  const govInfo = getGovernmentInfo(government);
-  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
-};
-
-// Función para calcular precio final de renovación
-const calculateRenewalPrice = (course: Course, nationality: string, government: string) => { // Using Prisma's Course type
-  const basePrice = getRenewalBasePrice(course, nationality);
-  const govInfo = getGovernmentInfo(government);
-  return calculatePriceWithSurcharge(basePrice, govInfo?.surcharge);
-};
 
 // ===== HANDLER PRINCIPAL =====
 
-export default async function handler(req: any, res: any) { // Use 'any' for req/res if not using specific Next.js types
+export default async function handler(req: any, res: any) {
   await cors(req, res);
 
-  // ✅ Manejo manual de preflight (CORS)
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin as string);
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
@@ -128,8 +105,8 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
       nationality,
       email,
       phone,
-      courses: selectedCourseIds = [], // These are strings from the frontend
-      renewalCourses: selectedRenewalIds = [], // These are strings from the frontend
+      courses: selectedCourseIds = [],
+      renewalCourses: selectedRenewalIds = [],
       government,
       submissionType,
     } = req.body;
@@ -150,70 +127,117 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
 
     // ===== REALIZAR TODOS LOS CÁLCULOS EN EL BACKEND =====
 
-    // Obtener información del gobierno
     const govInfo = getGovernmentInfo(government);
+    const surchargePerCourse = govInfo.surcharge;
 
-    // FETCH ALL COURSES FROM THE DATABASE FIRST
-    const allAvailableCourses: Course[] = await getAllCourses(); // <--- NEW: Get courses from DB
+    const allAvailableCourses: Course[] = await getAllCourses();
 
-    // Convert selectedCourseIds from strings to numbers for accurate filtering
     const parsedSelectedCourseIds = selectedCourseIds.map((id: string) => parseInt(id, 10));
     const parsedSelectedRenewalIds = selectedRenewalIds.map((id: string) => parseInt(id, 10));
 
-
-    // Filter selected courses from the courses fetched from the DB
     const selectedCourses = allAvailableCourses.filter((course) =>
-      parsedSelectedCourseIds.includes(course.id) // Compare numbers now
+      parsedSelectedCourseIds.includes(course.id)
     );
-
     const selectedRenewalCourses = allAvailableCourses.filter((course) =>
-      parsedSelectedRenewalIds.includes(course.id) // Compare numbers now
+      parsedSelectedRenewalIds.includes(course.id)
     );
 
-    // Calcular precios para cursos nuevos
     const coursesWithPrices = selectedCourses.map((course) => {
-      const basePrice = getCourseBasePrice(course, nationality);
-      const finalPrice = calculateCoursePrice(course, nationality, government);
-
+      const basePrice = getCoursePriceExcludingSurcharge(course, nationality);
       return {
         id: course.id,
         name: course.name,
         abbr: course.abbr,
         imo_no: course.imo_no,
-        basePrice,
-        finalPrice,
-        surchargeAmount: govInfo.surcharge,
+        basePrice: basePrice,
+        surchargePerItem: surchargePerCourse,
         type: "new",
       };
     });
 
-    // Calcular precios para renovaciones
     const renewalCoursesWithPrices = selectedRenewalCourses.map((course) => {
-      const basePrice = getRenewalBasePrice(course, nationality);
-      const finalPrice = calculateRenewalPrice(course, nationality, government);
-
+      const basePrice = getRenewalPriceExcludingSurcharge(course, nationality);
       return {
         id: course.id,
         name: course.name,
         abbr: course.abbr,
         imo_no: course.imo_no,
-        basePrice,
-        finalPrice,
-        surchargeAmount: govInfo.surcharge,
+        basePrice: basePrice,
+        surchargePerItem: surchargePerCourse,
         type: "renewal",
       };
     });
 
-    // Calcular totales
-    const newCoursesTotal = coursesWithPrices.reduce(
-      (total, course) => total + course.finalPrice,
+    // --- CÁLCULO DE TOTALES CON DESGLOSE ---
+
+    const newCoursesBaseTotal = coursesWithPrices.reduce(
+      (total, course) => total + course.basePrice,
       0
     );
-    const renewalCoursesTotal = renewalCoursesWithPrices.reduce(
-      (total, course) => total + course.finalPrice,
+    const newCoursesSurchargeTotal = coursesWithPrices.length * surchargePerCourse;
+    const newCoursesTotal = newCoursesBaseTotal + newCoursesSurchargeTotal;
+
+    const renewalCoursesBaseTotal = renewalCoursesWithPrices.reduce(
+      (total, course) => total + course.basePrice,
       0
     );
+    const renewalCoursesSurchargeTotal = renewalCoursesWithPrices.length * surchargePerCourse;
+    const renewalCoursesTotal = renewalCoursesBaseTotal + renewalCoursesSurchargeTotal;
+
     const totalCost = newCoursesTotal + renewalCoursesTotal;
+
+    // === LÓGICA PARA CREAR LA COTIZACIÓN TEMPORAL EN LA DB ===
+
+    // 1. Obtener o crear el usuario para enlazar la cotización
+    let currentUser: User | null = await prisma.user.findUnique({
+      where: { email: email },
+    });
+
+    if (!currentUser) {
+      // Si el usuario no existe, crearlo como CLIENTE.
+      // ¡ATENCIÓN! En producción, esta contraseña DEBE ser un hash seguro.
+      // Considera implementar un flujo de registro/autenticación adecuado.
+      currentUser = await prisma.user.create({
+        data: {
+          email: email,
+          password: 'temp_password_for_quotation_user', // Cambiar a un hash seguro en producción
+          name: `${name} ${lastName}`,
+          role: 'CLIENT',
+        },
+      });
+    }
+
+    // 2. Determinar el courseId para el registro principal de Quote
+    // Se usará el ID del primer curso seleccionado para satisfacer el requisito del modelo Quote.
+    // Esto es un workaround para modelos que esperan un solo curso por cotización.
+    let mainQuoteCourseId: number;
+    if (selectedCourses.length > 0) {
+      mainQuoteCourseId = selectedCourses[0].id;
+    } else { // Si no hay cursos nuevos, debe haber renovaciones (validado al inicio)
+      mainQuoteCourseId = selectedRenewalCourses[0].id;
+    }
+
+    // 3. Calcular la fecha de expiración (45 días desde ahora)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 45);
+
+    // 4. Crear el registro Quote principal en la base de datos
+    const createdQuote = await prisma.quote.create({
+      data: {
+        userId: currentUser.id,
+        courseId: mainQuoteCourseId, // Usamos el ID del primer curso como referencia
+        quotedPrice: totalCost, // El precio cotizado es el total de todos los servicios
+        status: "PENDING",
+        expiresAt: expiresAt,
+      },
+    });
+
+    // === FIN DE LÓGICA DE COTIZACIÓN TEMPORAL ===
+
+    const quotationNumber = `PMTS/Q/${createdQuote.id}`; // Usar el ID generado por la DB
+    const expirationDateForEmail = expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const creationDateForEmail = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
 
     // ===== GENERAR HTML PROFESIONAL PARA EMAIL =====
     const htmlContent = generateQuotationEmailHTML({
@@ -223,17 +247,24 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
       nationality,
       email,
       phone,
+      newCoursesBaseTotal,
+      newCoursesSurchargeTotal,
+      renewalCoursesBaseTotal,
+      renewalCoursesSurchargeTotal,
       coursesWithPrices,
       renewalCoursesWithPrices,
       newCoursesTotal,
       renewalCoursesTotal,
       totalCost,
       govInfo,
+      quotationNumber: quotationNumber, // Pasa el número de cotización generado
+      expiresAtDate: expirationDateForEmail, // Pasa la fecha de expiración formateada
+      date: creationDateForEmail, // Pasa la fecha de creación de la cotización
     });
 
     const pdfBuffer = await generatePdfBuffer(htmlContent);
     console.log("PDF buffer generado:", pdfBuffer);
-    const title = `PMTS Quotation (${courses_code}) - ${name} ${lastName} ($${totalCost.toFixed(2)})`
+    const title = `PMTS Quotation (${courses_code}) - ${name} ${lastName} ($${totalCost.toFixed(2)})`;
     const result = await mg.messages.create(
       process.env.MAILGUN_DOMAIN || "",
       createEmailData(
@@ -248,8 +279,17 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
     // ===== DEVOLVER RESULTADOS CALCULADOS =====
     const response = {
       success: true,
-      courses: coursesWithPrices,
-      renewalCourses: renewalCoursesWithPrices,
+      quotationId: createdQuote.id, // ID de la cotización en la DB
+      quotationNumber: quotationNumber, // Número de cotización formateado
+      expiresAt: expiresAt.toISOString(), // Fecha de expiración ISO string
+      courses: coursesWithPrices.map(course => ({
+        ...course,
+        finalPrice: course.basePrice // Para el frontend, el precio individual sin recargo
+      })),
+      renewalCourses: renewalCoursesWithPrices.map(course => ({
+        ...course,
+        finalPrice: course.basePrice // Para el frontend, el precio individual sin recargo
+      })),
       studentInfo: {
         name,
         lastName,
@@ -258,6 +298,10 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
         email,
         phone,
       },
+      newCoursesBaseTotal,
+      newCoursesSurchargeTotal,
+      renewalCoursesBaseTotal,
+      renewalCoursesSurchargeTotal,
       totalCost,
       newCoursesTotal,
       renewalCoursesTotal,
@@ -267,10 +311,10 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
 
     return res.status(200).json(response);
   } catch (error) {
-    console.error("Error al enviar el correo:", error);
+    console.error("Error al enviar el correo o crear la cotización:", error);
     await prisma.$disconnect();
     return res.status(500).json({
-      message: "Error al enviar el correo",
+      message: "Error al procesar la cotización",
       details: (error as Error)?.message || "Desconocido",
     });
   } finally {
@@ -279,10 +323,10 @@ export default async function handler(req: any, res: any) { // Use 'any' for req
 }
 
 const createEmailData = (
-  to: string, // Added type
-  title: string, // Added type
-  htmlContent: string, // Added type
-  pdfBuffer: Buffer, // Added type
+  to: string,
+  title: string,
+  htmlContent: string,
+  pdfBuffer: Buffer,
 ) => {
   const emailData: any = {
     from: `PMTS Quotations <noreply@${process.env.MAILGUN_DOMAIN}>`,
@@ -298,7 +342,6 @@ const createEmailData = (
       {
         filename: `PMTS-Quotation.pdf`,
         data: pdfBuffer,
-        // contentType: "application/pdf", // This might be needed depending on Mailgun version
       },
     ];
   }

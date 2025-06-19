@@ -1,5 +1,4 @@
-
-// Email template generator function that creates the HTML for the professional quotation
+// email-templates/email-template-generator.ts
 import path from 'path';
 import fs from 'fs';
 
@@ -17,14 +16,37 @@ export function generateQuotationEmailHTML(data: {
   nationality: string
   email: string
   phone: string
-  coursesWithPrices: any[]
-  renewalCoursesWithPrices: any[]
-  newCoursesTotal: number
-  renewalCoursesTotal: number
+  // Propiedades para los desgloses de totales (base y surcharge)
+  newCoursesBaseTotal: number
+  newCoursesSurchargeTotal: number
+  renewalCoursesBaseTotal: number
+  renewalCoursesSurchargeTotal: number
+  // Los arrays de cursos individuales que solo tienen 'basePrice'
+  coursesWithPrices: {
+    id: number;
+    name: string;
+    abbr: string;
+    imo_no: string;
+    basePrice: number;
+    surchargePerItem: number;
+    type: string;
+  }[]
+  renewalCoursesWithPrices: {
+    id: number;
+    name: string;
+    abbr: string;
+    imo_no: string;
+    basePrice: number;
+    surchargePerItem: number;
+    type: string;
+  }[]
+  newCoursesTotal: number // Total de cursos nuevos (base + su surcharge total)
+  renewalCoursesTotal: number // Total de renovaciones (base + su surcharge total)
   totalCost: number
   govInfo: any
-  quotationNumber?: string
-  date?: string
+  quotationNumber: string // Ahora es OBLIGATORIO y se pasa desde el handler
+  date: string // Fecha de creación, se pasa desde el handler
+  expiresAtDate: string // ¡NUEVO! Fecha de expiración formateada, se pasa desde el handler
 }) {
   const {
     name,
@@ -33,33 +55,42 @@ export function generateQuotationEmailHTML(data: {
     nationality,
     email,
     phone,
+    // Desestructurar todas las propiedades de totales y fechas
+    newCoursesBaseTotal,
+    newCoursesSurchargeTotal,
+    renewalCoursesBaseTotal,
+    renewalCoursesSurchargeTotal,
     coursesWithPrices,
     renewalCoursesWithPrices,
     newCoursesTotal,
     renewalCoursesTotal,
     totalCost,
     govInfo,
-    quotationNumber = `PMTS/Q/${new Date().getFullYear()}/${Math.floor(Math.random() * 10000)}`,
-    date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    quotationNumber,
+    date,
+    expiresAtDate, // Usar la fecha de expiración pasada
   } = data
 
-  // Combine all courses for the table
+  // Combinar todos los cursos para la tabla de "SERVICE DETAILS"
   const allCourses = [
     ...coursesWithPrices.map((course, index) => ({
       ...course,
       displayName: course.name,
       number: index + 1,
+      displayPrice: course.basePrice, // Para la tabla, el precio unitario y total es el BASE
     })),
     ...renewalCoursesWithPrices.map((course, index) => ({
       ...course,
       displayName: `${course.name} (Renewal)`,
       number: coursesWithPrices.length + index + 1,
+      displayPrice: course.basePrice, // Para la tabla, el precio unitario y total es el BASE
     })),
   ]
 
-  // Calculate government fee (you can adjust this logic)
-  const governmentFee = totalCost * 0.05 // 5% government fee example
-  const grandTotal = totalCost + governmentFee
+  // Calcular los totales que irán en las líneas de "Sub Total" y "Certificate Government Fee"
+  const overallBaseTotal = newCoursesBaseTotal + renewalCoursesBaseTotal;
+  const overallSurchargeTotal = newCoursesSurchargeTotal + renewalCoursesSurchargeTotal;
+
 
   return `
  <!DOCTYPE html>
@@ -71,7 +102,7 @@ export function generateQuotationEmailHTML(data: {
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f7fa;">
       <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; color: #333333; line-height: 1;">
-        
+
         <!-- Header -->
         <div style="background-color: #1e40af; color: white; padding: 30px 40px;">
           <table style="width: 100%; border-collapse: collapse;">
@@ -80,7 +111,7 @@ export function generateQuotationEmailHTML(data: {
                 <!-- Logo -->
                 <img src="${logo ? `data:image/png;base64,${logo}` : '/placeholder.svg?...'}" alt="Company Logo" style="max-width: 100px; height: auto;" />
               </td>
-              
+
               <td style="vertical-align: middle; text-align: left;">
                 <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: bold;">
                   Panama Maritime Training Services, Inc.
@@ -93,8 +124,8 @@ export function generateQuotationEmailHTML(data: {
                   <p style="margin: 4px 0;">Phone: +(507) 395-2801 / +(507) 322-0013</p>
                 </div>
               </td>
-              
-              <td>               
+
+              <td>
                 <h2 style="margin: 0 0 0px 0; font-size: 12px; color: white; font-weight: bold;">
                   QUOTATION #${quotationNumber}
                 </h2>
@@ -111,7 +142,7 @@ export function generateQuotationEmailHTML(data: {
                 <div style="font-size: 14px;">
                   <p style="margin: 4px 0;"><strong>Number:</strong> ${quotationNumber}</p>
                   <p style="margin: 4px 0;"><strong>Date:</strong> ${date}</p>
-                  <p style="margin: 4px 0;"><strong>Valid for:</strong> 45 days</p>
+                  <p style="margin: 4px 0;"><strong>Valid until:</strong> ${expiresAtDate}</p> <!-- Usa la nueva fecha de expiración -->
                   <p style="margin: 4px 0;"><strong>Prepared by:</strong> PMTS Team</p>
                 </div>
               </td>
@@ -123,7 +154,7 @@ export function generateQuotationEmailHTML(data: {
                   <p style="margin: 6px 0;"><strong>Name:</strong> ${name.toUpperCase()} ${lastName.toUpperCase()}</p>
                   <p style="margin: 6px 0;"><strong>Nationality:</strong> ${nationality.toUpperCase()}</p>
                   <p style="margin: 6px 0;"><strong>Document:</strong> ${document}</p>
-                  <p style="margin: 6px 0;"><strong>Email:</strong> ${email}</p>
+                  <p style="6px 0;"><strong>Email:</strong> ${email}</p>
                   <p style="margin: 6px 0;"><strong>Phone:</strong> ${phone}</p>
                   <p style="margin: 6px 0;"><strong>Government/Institution:</strong> ${govInfo.label}</p>
                 </div>
@@ -160,8 +191,8 @@ export function generateQuotationEmailHTML(data: {
                 ${course.imo_no ? `<br><small style="color: #6b7280;">IMO: ${course.imo_no}</small>` : ""}
               </td>
               <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: center;">1</td>
-              <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">$${course.finalPrice.toFixed(2)}</td>
-              <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right; font-weight: bold;">$${course.finalPrice.toFixed(2)}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right;">$${course.displayPrice.toFixed(2)}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 8px; text-align: right; font-weight: bold;">$${course.displayPrice.toFixed(2)}</td>
             </tr>
             `,
               )
@@ -170,13 +201,13 @@ export function generateQuotationEmailHTML(data: {
             <!-- Subtotal Row -->
             <tr style="background-color: #f3f4f6;">
               <td colspan="4" style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">Sub Total</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">$${totalCost.toFixed(2)}</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">$${overallBaseTotal.toFixed(2)}</td>
             </tr>
 
             <!-- Government Fee Row -->
             <tr style="background-color: #f3f4f6;">
               <td colspan="4" style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">Certificate Government Fee</td>
-              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">$</td>
+              <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold;">$${overallSurchargeTotal.toFixed(2)}</td>
             </tr>
 
             <!-- Grand Total Row -->
@@ -240,7 +271,7 @@ export function generateQuotationEmailHTML(data: {
             This quotation is valid for 45 days. Please contact us for any questions or clarifications.
           </p>
             <p style="margin: 4px 0;">Phone: +(507) 395-2801 / +(507) 322-0013</p>
-            <p style="margin: 4px 0;">Email: info@panamamaritimetraining.com</p>
+            <p style="4px 0;">Email: info@panamamaritimetraining.com</p>
             <p style="margin: 4px 0;">Web: www.panamamaritimetraining.com</p>
         </div>
       </div>
