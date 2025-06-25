@@ -11,6 +11,7 @@ const cors = initMiddleware(
       const allowedOrigins = [
         "http://localhost:5173",
         "https://pmts-quote.vercel.app",
+        "https://quote.panamamaritimetraining.com/",
       ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
