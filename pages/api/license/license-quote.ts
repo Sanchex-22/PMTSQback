@@ -95,8 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const emailData = {
       from: `PMTSQ Licenses <noreply@${process.env.MAILGUN_DOMAIN}>`,
-      to: "sanchex.dev02@gmail.com", // <-- CAMBIA ESTO AL CORREO DONDE QUIERES RECIBIR LAS NOTIFICACIONES
-      cc: "sanchex.dev02@gmail.com", // Opcional
+      to: `${process.env.ADMIN_EMAIL || ""}`,
       subject: emailSubject,
       html: emailHtmlBody,
       attachment: [

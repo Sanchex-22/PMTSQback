@@ -249,14 +249,14 @@ export default async function handler(
     // 5. ENVIAR EL CORREO CON MAILGUN
     const emailData: any = {
       from: `Liberia Applications <noreply@${process.env.MAILGUN_DOMAIN}>`,
-      to: "sanchex.dev02@gmail.com", // O tu email de administrador
+      to: `${process.env.ADMIN_EMAIL || ""}`,
       subject: emailSubject,
       html: emailHtmlBody,
       attachment: attachments,
     };
 
     console.log(
-      `Enviando correo a 'sanchex.dev02@gmail.com' con ${attachments.length} adjuntos.`
+      `Enviando correo a ${process.env.ADMIN_EMAIL || ""} con ${attachments.length} adjuntos.`
     );
     const mailgunResponse = await mg.messages.create(
       process.env.MAILGUN_DOMAIN as string,

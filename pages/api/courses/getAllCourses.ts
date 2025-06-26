@@ -3,30 +3,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import {
   getAllCourses,
-  // getCourseById, // Not needed for 'get all' functionality
-  // createCourse, // Not needed for 'get all' functionality
-  // updateCourse, // Not needed for 'get all' functionality
-  // deleteCourse, // Not needed for 'get all' functionality
-} from '../../../db/courses'; // Adjust path if your 'src/db/courses.ts' is elsewhere
-import initMiddleware from '../../../lib/init-middleware';
-import Cors from "cors";
+} from '../../../db/courses';
+import cors from '../../../lib/cors-middleware';
 
-const cors = initMiddleware(
-  Cors({
-    methods: ["POST", "GET", "OPTIONS"],
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "https://pmts-quote.vercel.app",
-      ];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("No autorizado por CORS"));
-      }
-    },
-  })
-);
 async function handleGetAllCourses(req: NextApiRequest, res: NextApiResponse) {
   try {
     const courses = await getAllCourses(); // Call the function from '../../../src/db/courses'

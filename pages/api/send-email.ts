@@ -71,9 +71,6 @@ export const getRenewalPriceExcludingSurcharge = (course: Course, nationality: s
   }
 };
 
-
-// ===== HANDLER PRINCIPAL =====
-
 export default async function handler(req: any, res: any) {
   await cors(req, res);
 
@@ -186,9 +183,6 @@ export default async function handler(req: any, res: any) {
 
     const totalCost = newCoursesTotal + renewalCoursesTotal;
 
-    // === LÓGICA PARA CREAR LA COTIZACIÓN TEMPORAL EN LA DB ===
-
-    // 1. Obtener o crear el usuario para enlazar la cotización
     let currentUser: User | null = await prisma.user.findUnique({
       where: { email: email },
     });
@@ -235,8 +229,6 @@ export default async function handler(req: any, res: any) {
     const expirationDateForEmail = expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const creationDateForEmail = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-
-    // ===== GENERAR HTML PROFESIONAL PARA EMAIL =====
     const htmlContent = generateQuotationEmailHTML({
       name,
       lastName,
@@ -254,9 +246,9 @@ export default async function handler(req: any, res: any) {
       renewalCoursesTotal,
       totalCost,
       govInfo,
-      quotationNumber: quotationNumber, // Pasa el número de cotización generado
-      expiresAtDate: expirationDateForEmail, // Pasa la fecha de expiración formateada
-      date: creationDateForEmail, // Pasa la fecha de creación de la cotización
+      quotationNumber: quotationNumber,
+      expiresAtDate: expirationDateForEmail,
+      date: creationDateForEmail,
     });
 
     const pdfBuffer = await generatePdfBuffer(htmlContent);
@@ -330,7 +322,7 @@ const createEmailData = (
   const emailData: any = {
     from: `PMTS Quotations <noreply@${process.env.MAILGUN_DOMAIN}>`,
     to,
-    cc: "sanchex.dev02@gmail.com",
+    cc: `${process.env.ADMIN_EMAIL || ""}`,
     subject: title,
     text: "PMTS Quotation PDF attached.",
     html: htmlContent,

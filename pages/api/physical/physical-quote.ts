@@ -25,7 +25,7 @@ const mg = mailgun.client({
   key: process.env.MAILGUN_API_KEY,
 });
 
-const ADMIN_EMAIL_RECIPIENT = "sanchex.dev02@gmail.com";
+const ADMIN_EMAIL_RECIPIENT = `${process.env.ADMIN_EMAIL || ""}`;
 
 const EXPECTED_FILE_FIELDS = [
   "documento_identidad",
