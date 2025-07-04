@@ -54,3 +54,29 @@ model Quote {
   course      Course      @relation(fields: [courseId], references: [id])
   expiresAt   DateTime    // ¡NUEVO CAMPO! Para la validez de 45 días
 }
+model Instructor {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
+
+
+model Evaluation {
+  id                    String   @id @default(uuid())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  courseName            String
+  instructorName        String
+  personnelAttention    String
+  questionsReplied      String
+  certificateDelivery   String
+  websiteInformation    String
+  facilities            String
+  scheduleAppropriate   String
+  studyMaterial         String
+  trainingQuality       String
+  provideFeedback       String
+  demonstrateExamples   String
+  encourageParticipation String
+  communicateClearly    String
+  demonstrateKnowledge  String
+}
