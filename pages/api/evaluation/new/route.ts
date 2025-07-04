@@ -1,13 +1,15 @@
 // app/api/evaluation/new/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import cors from '../../../../lib/cors-middleware';
 
 const prisma = new PrismaClient();
 
-export async function POST(request: Request) {
+export async function POST(req: Request, res: Response) {
   try {
+    await cors(req,res);
     // FormData se puede leer directamente del objeto request en Next.js App Router
-    const formData = await request.formData();
+    const formData = await req.formData();
 
     // Extraer los datos y validarlos
     const courseName = formData.get("courseName") as string;
