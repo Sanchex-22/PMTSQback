@@ -1,8 +1,9 @@
 // prisma/seed.ts (CORREGIDO)
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from 'bcryptjs';
-const dotenv = require("dotenv");
+import dotenv from "dotenv";
 dotenv.config();
+
 
 if (!process.env.ADMIN_EMAIL) {
   throw new Error("ADMIN EMAIL is not defined");
