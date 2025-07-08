@@ -1,4 +1,5 @@
 // prisma/schema.prisma
+
 datasource db {
   provider = "postgresql" // o "mysql", "sqlite"
   url      = env("DATABASE_URL")
@@ -9,9 +10,9 @@ generator client {
 }
 
 enum Role {
-  ADMIN  // Administrador con todos los permisos
-  SALES  // Vendedor que puede crear cotizaciones
-  CLIENT // Cliente que puede solicitar cotizaciones
+  ADMIN
+  SALES
+  CLIENT
 }
 
 model User {
@@ -25,15 +26,16 @@ model User {
 }
 
 model Course {
-  id                     Int      @id @default(autoincrement())
-  name                   String   @unique
-  abbr                   String?
-  price_panamanian       Float?
+  id                       Int           @id @default(autoincrement())
+  name                     String        @unique
+  abbr                     String?
+  price_panamanian         Float?
   price_panamanian_renewal Float?
-  price_foreign          Float?
-  price_foreign_renewal  Float?
-  imo_no                 String?
-  quotes                 Quote[]
+  price_foreign            Float?
+  price_foreign_renewal    Float?
+  imo_no                   String?
+  // CAMBIO: Ahora se relaciona con la tabla intermedia QuoteCourse
+  quoteItems               QuoteCourse[]
 }
 
 enum QuoteStatus {
@@ -43,17 +45,38 @@ enum QuoteStatus {
   REJECTED
 }
 
+// NUEVO MODELO: La tabla intermedia para la relación muchos a muchos
+model QuoteCourse {
+  id          Int    @id @default(autoincrement())
+  quoteId     Int
+  quote       Quote  @relation(fields: [quoteId], references: [id])
+  courseId    Int
+  course      Course @relation(fields: [courseId], references: [id])
+  type        String // "new" o "renewal" para saber de qué tipo era
+  basePrice   Float  // El precio base calculado para este curso en la cotización
+  surcharge   Float  // El recargo aplicado a este curso en la cotización
+
+  @@unique([quoteId, courseId, type]) // Evita duplicados en la misma cotización
+}
+
 model Quote {
   id          Int         @id @default(autoincrement())
   createdAt   DateTime    @default(now())
   quotedPrice Float
   status      QuoteStatus @default(PENDING)
+  expiresAt   DateTime
+  government  String?     // Opcional: para guardar qué tipo de gobierno se usó
   userId      Int
   user        User        @relation(fields: [userId], references: [id])
-  courseId    Int
-  course      Course      @relation(fields: [courseId], references: [id])
-  expiresAt   DateTime    // ¡NUEVO CAMPO! Para la validez de 45 días
+
+  // CAMBIO: Se elimina la relación directa a un solo curso
+  // courseId    Int
+  // course      Course      @relation(fields: [courseId], references: [id])
+
+  // CAMBIO: Ahora una cotización tiene una lista de items de curso
+  courses     QuoteCourse[]
 }
+
 model Instructor {
   id   Int    @id @default(autoincrement())
   name String @unique

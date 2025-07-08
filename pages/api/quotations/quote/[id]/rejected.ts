@@ -1,6 +1,6 @@
 // pages/api/quotations/[id]/approve.ts
 import { PrismaClient } from "@prisma/client";
-import cors from "../../../../lib/cors-middleware"; // Ajusta la ruta si es necesario
+import cors from "../../../../../lib/cors-middleware";
 
 const prisma = new PrismaClient();
 
@@ -27,12 +27,12 @@ export default async function handler(req: any, res: any) {
     // --- AUTORIZACIÓN: ¡CRÍTICO! ---
     // SOLO los usuarios 'ADMIN' o 'SALES' deberían poder aprobar cotizaciones.
     // Ejemplo (pseudocódigo):
-    /*
+    
     const user = req.user; // Asume que el middleware de auth ya populó req.user
     if (!user || (user.role !== 'ADMIN' && user.role !== 'SALES')) {
       return res.status(403).json({ message: "Forbidden: You do not have permission to approve quotations." });
     }
-    */
+    
     // --- FIN AUTORIZACIÓN ---
 
     const existingQuote = await prisma.quote.findUnique({

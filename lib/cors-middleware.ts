@@ -6,7 +6,7 @@ import initMiddleware from './init-middleware';
 // Aquí está tu configuración de CORS
 const cors = initMiddleware(
   Cors({
-    methods: ["POST", "GET", "OPTIONS"],
+    methods: ["POST", "GET", "DELETE", "PUT","OPTIONS"],
     origin: (origin, callback) => {
       const allowedOrigins = [
         "http://localhost:5173",

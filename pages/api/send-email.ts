@@ -9,6 +9,7 @@ import { getAllCourses } from "../../db/courses";
 import cors from "../../lib/cors-middleware";
 import { courses_code } from "../../data/codes";
 import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
+import { generateEmailHTML } from "../../email-templates/email-template";
 
 const prisma = new PrismaClient();
 
@@ -164,6 +165,10 @@ export default async function handler(req: any, res: any) {
         type: "renewal",
       };
     });
+        const allQuotedItems = [
+      ...coursesWithPrices,
+      ...renewalCoursesWithPrices,
+    ];
 
     // --- CÁLCULO DE TOTALES CON DESGLOSE ---
 
@@ -212,14 +217,21 @@ export default async function handler(req: any, res: any) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 45);
 
-    // 4. Crear el registro Quote principal en la base de datos
     const createdQuote = await prisma.quote.create({
       data: {
         userId: currentUser.id,
-        courseId: mainQuoteCourseId, // Usamos el ID del primer curso como referencia
-        quotedPrice: totalCost, // El precio cotizado es el total de todos los servicios
+        quotedPrice: totalCost,
         status: "PENDING",
         expiresAt: expiresAt,
+        government: government,
+        courses: {
+          create: allQuotedItems.map(item => ({
+            courseId: item.id,
+            type: item.type,
+            basePrice: item.basePrice,
+            surcharge: item.surchargePerItem,
+          })),
+        },
       },
     });
 
@@ -229,7 +241,7 @@ export default async function handler(req: any, res: any) {
     const expirationDateForEmail = expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const creationDateForEmail = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-    const htmlContent = generateQuotationEmailHTML({
+    const htmlQuotation = generateQuotationEmailHTML({
       name,
       lastName,
       document,
@@ -250,8 +262,15 @@ export default async function handler(req: any, res: any) {
       expiresAtDate: expirationDateForEmail,
       date: creationDateForEmail,
     });
+    const htmlContent = generateEmailHTML({
+      name,
+      lastName,
+      quotationNumber: quotationNumber,
+      coursesWithPrices,
+      renewalCoursesWithPrices
+    });
 
-    const pdfBuffer = await generatePdfBuffer(htmlContent);
+    const pdfBuffer = await generatePdfBuffer(htmlQuotation);
     console.log("PDF buffer generado:", pdfBuffer);
     const title = `PMTS Quotation (${courses_code}) - ${name} ${lastName} ($${totalCost.toFixed(2)})`;
     const result = await mg.messages.create(

@@ -1,6 +1,6 @@
 // pages/api/quotations/[id]/approve.ts
 import { PrismaClient } from "@prisma/client";
-import cors from "../../../../lib/cors-middleware"; // Ajusta la ruta si es necesario
+import cors from "../../../../../lib/cors-middleware";
 
 const prisma = new PrismaClient();
 
