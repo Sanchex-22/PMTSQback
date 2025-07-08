@@ -1,6 +1,41 @@
 // prisma/seed.ts (CORREGIDO)
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from 'bcryptjs';
+const dotenv = require("dotenv");
+dotenv.config();
+
+if (!process.env.ADMIN_EMAIL) {
+  throw new Error("ADMIN EMAIL is not defined");
+}
+
+if (!process.env.ADMIN_PASS) {
+  throw new Error("ADMIN PASS is not defined");
+}
+
+if (!process.env.ADMIN_ROLE) {
+  throw new Error("2 ADMIN EMAIL is not defined");
+}
+
+if (!process.env.ADMIN_NAME) {
+  throw new Error("ADMIN EMAIL is not defined");
+}
+
+if (!process.env.SECOND_ADMIN_EMAIL) {
+  throw new Error("2 ADMIN EMAIL is not defined");
+}
+
+if (!process.env.SECOND_ADMIN_PASS) {
+  throw new Error("ADMIN EMAIL is not defined");
+}
+
+if (!process.env.SECOND_ADMIN_ROLE) {
+  throw new Error("2 ADMIN EMAIL is not defined");
+}
+
+if (!process.env.SECOND_ADMIN_NAME) {
+  throw new Error("ADMIN EMAIL is not defined");
+}
+
 
 export interface CourseData {
   id: number;
@@ -996,23 +1031,23 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log(`Iniciando el proceso de siembra...`);
-  const hashedPassword = await bcrypt.hash("Lexus0110", 10);
+  const hashedPassword = await bcrypt.hash(`${process.env.ADMIN_PASS}`, 10);
 
   console.log("Seeding admin users...");
 
   await prisma.user.createMany({
     data: [
       {
-        email: "david@intermaritime.org",
+        email: `${process.env.ADMIN_EMAIL}`,
         password: hashedPassword,
-        name: "Carlos Sanchez",
-        role: "ADMIN",
+        name: `${process.env.ADMIN_NAME}`,
+        role: (process.env.ADMIN_ROLE as Role) || "CLIENT",
       },
       {
-        email: "admin2@gmail.com",
+        email: `${process.env.SECOND_ADMIN_EMAIL}`,
         password: hashedPassword,
-        name: "Admin User Two",
-        role: "ADMIN",
+        name: `${process.env.SECOND_ADMIN_NAME}`,
+        role: (process.env.ADMIN_ROLE as Role) || "CLIENT",
       },
     ],
     skipDuplicates: true,
