@@ -1,16 +1,15 @@
 // pages/api/send-email.ts
+import bcrypt from 'bcryptjs';
 import Mailgun from "mailgun.js";
 import { generateQuotationEmailHTML } from "../../email-templates/email-template-generator";
-const dotenv = require("dotenv");
-dotenv.config();
-
 import { Course, PrismaClient, User } from "@prisma/client"; // Import User type
 import { getAllCourses } from "../../db/courses";
 import cors from "../../lib/cors-middleware";
 import { courses_code } from "../../data/codes";
 import { generatePdfBuffer } from "../../email-templates/generatePdfBuffer";
 import { generateEmailHTML } from "../../email-templates/email-template";
-
+const dotenv = require("dotenv");
+dotenv.config();
 const prisma = new PrismaClient();
 
 if (!process.env.MAILGUN_API_KEY) {
@@ -29,6 +28,10 @@ const mg = mailgun.client({
 
 if (!process.env.MAILGUN_API_KEY) {
   throw new Error("MAILGUN_API_KEY is not defined");
+}
+
+if (!process.env.CLIENT_PASS) {
+  throw new Error("CLIENT_PASS is not defined");
 }
 
 // ===== LÓGICA DE CÁLCULOS MATEMÁTICOS - SURCHARGE EN DÓLARES =====
@@ -193,13 +196,11 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!currentUser) {
-      // Si el usuario no existe, crearlo como CLIENTE.
-      // ¡ATENCIÓN! En producción, esta contraseña DEBE ser un hash seguro.
-      // Considera implementar un flujo de registro/autenticación adecuado.
+      const hashedPassword = await bcrypt.hash(`${process.env.CLIENT_PASS}`, 10);
       currentUser = await prisma.user.create({
         data: {
           email: email,
-          password: 'temp_password_for_quotation_user', // Cambiar a un hash seguro en producción
+          password: hashedPassword, // Cambiar a un hash seguro en producción
           name: `${name} ${lastName}`,
           role: 'CLIENT',
         },
