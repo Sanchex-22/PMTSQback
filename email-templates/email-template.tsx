@@ -5,7 +5,7 @@ import fs from 'fs';
 // Cargar el logo y definir variables de contacto
 const logoPath = path.join(process.cwd(), 'public', 'images', 'logo.png');
 const logoBase64 = fs.readFileSync(logoPath).toString('base64');
-const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER || '5073952801';
+const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER || '50764901339';
 
 // --- INTERFACES (Sin cambios) ---
 interface CourseSelection {
@@ -35,12 +35,8 @@ export function generateEmailHTML(data: {
   ];
 
   // Textos para los enlaces de WhatsApp en ambos idiomas
-  const whatsappTextEN = encodeURIComponent(
-    `Hello, I am interested in validating my quotation #${quotationNumber}. Could you please guide me on the next steps and payment methods?`
-  );
-  const whatsappTextES = encodeURIComponent(
-    `Hola, estoy interesado en validar mi cotización #${quotationNumber}. ¿Podrían indicarme los siguientes pasos y los métodos de pago?`
-  );
+  const whatsappLinkEN = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=Hola%2C+me+interesa+continuar+esta+Propuesta.`;
+  const whatsappLinkES = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=Hola%2C+me+interesa+continuar+esta+Propuesta.`;
 
   return `
   <!DOCTYPE html>
@@ -98,7 +94,7 @@ export function generateEmailHTML(data: {
           <p style="font-size: 14px; color: #4338ca; margin-bottom: 25px;">
             <strong>Please have the attached PDF document ready.</strong>
           </p>
-          <a href="https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappTextEN}" target="_blank" class="whatsapp-button">
+          <a href="${whatsappLinkEN}" target="_blank" class="whatsapp-button">
             <img src="https://i.ibb.co/L01JknX/whatsapp-icon-white.png" alt="WhatsApp" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 8px;"/>
             Contact via WhatsApp
           </a>
@@ -137,7 +133,7 @@ export function generateEmailHTML(data: {
           <p style="font-size: 14px; color: #4338ca; margin-bottom: 25px;">
             <strong>No olvides tener a mano el documento PDF adjunto.</strong>
           </p>
-          <a href="https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappTextES}" target="_blank" class="whatsapp-button">
+          <a href="${whatsappLinkES}" target="_blank" class="whatsapp-button">
             <img src="https://i.ibb.co/L01JknX/whatsapp-icon-white.png" alt="WhatsApp" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 8px;"/>
             Contactar por WhatsApp
           </a>
