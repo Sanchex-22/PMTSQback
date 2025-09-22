@@ -127,7 +127,6 @@ export default async function handler(req: any, res: any) {
     }
 
     // ===== REALIZAR TODOS LOS CÁLCULOS EN EL BACKEND =====
-
     const govInfo = getGovernmentInfo(government);
     const surchargePerCourse = govInfo.surcharge;
 

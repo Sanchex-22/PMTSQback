@@ -2,7 +2,7 @@
     "name": "backend",
     "type": "module",
     "engines": {
-        "node": "18.x"
+        "node": "22.x"
     },
     "scripts": {
         "dev": "next dev",
