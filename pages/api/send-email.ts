@@ -69,9 +69,9 @@ const getCoursePriceExcludingSurcharge = (course: Course, nationality: string) =
 
 export const getRenewalPriceExcludingSurcharge = (course: Course, nationality: string) => {
   if (isPanamanian(nationality)) {
-    return (course.price_panamanian_renewal || 0) / 2;
+    return (course.price_panamanian_renewal || 0) ;
   } else {
-    return (course.price_foreign_renewal || 0) / 2;
+    return (course.price_foreign_renewal || 0) ;
   }
 };
 
