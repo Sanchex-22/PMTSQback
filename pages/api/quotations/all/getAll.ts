@@ -31,12 +31,13 @@ export default async function handler(req: any, res: any) {
 
     const [quotes, total] = await Promise.all([
       prisma.quote.findMany({
+        where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include,
       }),
-      prisma.quote.count(),
+      prisma.quote.count({ where: { deletedAt: null } }),
     ]);
 
     return res.status(200).json({

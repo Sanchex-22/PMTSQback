@@ -29,6 +29,7 @@ export default async function handler(req: any, res: any) {
     const quote = await prisma.quote.findUnique({
       where: {
         id: quotationId,
+        deletedAt: null,
       },
       // El 'include' es la clave para traer toda la data relacionada
       include: {

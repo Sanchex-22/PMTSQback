@@ -68,16 +68,11 @@ model Quote {
   quotedPrice Float
   status      QuoteStatus @default(PENDING)
   expiresAt   DateTime
-  government  String?     // Opcional: para guardar qué tipo de gobierno se usó
+  government  String?
   userId      Int
   user        User        @relation(fields: [userId], references: [id])
-
-  // CAMBIO: Se elimina la relación directa a un solo curso
-  // courseId    Int
-  // course      Course      @relation(fields: [courseId], references: [id])
-
-  // CAMBIO: Ahora una cotización tiene una lista de items de curso
   courses     QuoteCourse[]
+  deletedAt   DateTime?
 }
 
 model Instructor {
