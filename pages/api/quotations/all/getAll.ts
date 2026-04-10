@@ -16,49 +16,38 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // Usamos findMany para obtener TODAS las cotizaciones
-    const quotes = await prisma.quote.findMany({
-      // Ordenamos las cotizaciones de la más reciente a la más antigua
-      orderBy: {
-        createdAt: 'desc',
-      },
-      // El 'include' es idéntico al de buscar una sola cotización,
-      // pero se aplicará a cada una de las cotizaciones en la lista.
-      include: {
-        // 1. Incluimos la información del usuario
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true
-          }
-        },
-        // 2. Incluimos los items de la cotización
-        courses: {
-          // 3. Para cada item, incluimos los detalles del curso asociado
-          include: {
-            course: {
-              select: {
-                id: true,
-                name: true,
-                abbr: true,
-                imo_no: true
-              }
-            }
-          }
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const include = {
+      user: { select: { id: true, name: true, email: true, role: true } },
+      courses: {
+        include: {
+          course: { select: { id: true, name: true, abbr: true, imo_no: true } }
         }
       }
+    };
+
+    const [quotes, total] = await Promise.all([
+      prisma.quote.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include,
+      }),
+      prisma.quote.count(),
+    ]);
+
+    return res.status(200).json({
+      data: quotes,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
     });
-
-    if (!quotes) {
-        // Aunque findMany devuelve [] si no encuentra nada, mantenemos esta comprobación por si acaso.
-        return res.status(404).json({ message: "No quotations found." });
-    }
-
-    // El resultado 'quotes' es un array donde cada elemento es una cotización
-    // completa con su usuario y su lista de cursos.
-    return res.status(200).json(quotes);
 
   } catch (error) {
     console.error("Error fetching all quotations:", error);

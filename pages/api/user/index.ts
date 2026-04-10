@@ -1,24 +1,40 @@
 // pages/api/users/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import bcrypt from 'bcryptjs'; // Importa bcryptjs
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import cors from '../../../lib/cors-middleware';
 
 const prisma = new PrismaClient();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Manejar solicitudes GET (obtener todos los usuarios)
+  await cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Manejar solicitudes GET (obtener todos los usuarios, con paginación)
   if (req.method === 'GET') {
     try {
-      const users = await prisma.user.findMany({
-        select: { // Selecciona solo los campos que quieres enviar al cliente (NO LA CONTRASEÑA)
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-        },
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(10, parseInt(req.query.limit as string) || 50));
+      const skip = (page - 1) * limit;
+
+      // Solo usuarios con acceso al panel (no clientes)
+      const adminFilter = { role: { in: ['ADMIN', 'SALES'] as any } };
+
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where: adminFilter,
+          select: { id: true, email: true, name: true, role: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.user.count({ where: adminFilter }),
+      ]);
+
+      return res.status(200).json({
+        data: users,
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
       });
-      return res.status(200).json(users);
     } catch (error) {
       console.error('Error fetching users:', error);
       return res.status(500).json({ message: 'Error al obtener usuarios.', error });
@@ -48,12 +64,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const hashedPassword = await bcrypt.hash(password, 10); // El segundo parámetro es el 'saltRounds'
 
       // 3. Crear el usuario en la base de datos
+      const allowedRoles = ['ADMIN', 'SALES'];
+      const assignedRole = allowedRoles.includes(role) ? role : 'SALES';
+
       const newUser = await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
-          name: name || null, // Permite que el nombre sea opcional
-          role: role || 'USER', // Asigna 'USER' por defecto si no se especifica un rol
+          name: name || null,
+          role: assignedRole,
         },
         select: { // Selecciona solo los campos que quieres enviar al cliente (NO LA CONTRASEÑA)
           id: true,
