@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  */
 export async function getAllCourses(): Promise<Course[]> {
   try {
-    const courses = await prisma.course.findMany();
+    const courses = await prisma.course.findMany({ where: { deletedAt: null } });
     return courses;
   } catch (error) {
     console.error("Error fetching all courses:", error);
