@@ -35,6 +35,7 @@ model Course {
   price_foreign_renewal    Float?
   imo_no                   String?
   // CAMBIO: Ahora se relaciona con la tabla intermedia QuoteCourse
+  deletedAt                DateTime? 
   quoteItems               QuoteCourse[]
 }
 
